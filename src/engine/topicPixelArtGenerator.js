@@ -23,6 +23,12 @@ export function synthesizeTopicScenario(cleanWish) {
 
 function detectTopicCategory(text) {
   // 1. Specific Iconic / Pop-Culture Entities
+  if (text.match(/\b(pele|pelé|maradona|messi|ronaldo|soccer|football|world cup|fifa|striker|penalty)\b/)) {
+    return 'PELE';
+  }
+  if (text.match(/\b(napoleon|caesar|julius caesar|cleopatra|lincoln|alexander the great|genghis khan|beethoven|mozart|elvis)\b/)) {
+    return 'HISTORICAL';
+  }
   if (text.match(/\b(dragon|wyvern|drake|fire drake|red dragon|black dragon|shenron|draconic)\b/)) {
     return 'DRAGON';
   }
@@ -81,6 +87,84 @@ function detectTopicCategory(text) {
  */
 export function generateProceduralPixelSprite(category, wishLower) {
   switch (category) {
+    case 'PELE': {
+      // Golden Classic World Cup Soccer Ball (16x16 Hex-stitched leather Telstar with golden trophy accents)
+      return {
+        name: 'PROCEDURAL_SOCCER_BALL',
+        width: 16,
+        height: 16,
+        scale: 4.5,
+        mass: 320,
+        restitution: 0.85,
+        palette: {
+          '.': null,
+          'K': '#0f172a', // Deep slate leather stitch outline
+          'B': '#1e293b', // Black pentagon patch
+          'W': '#f8fafc', // Clean white leather panel
+          'S': '#cbd5e1', // Shaded white panel
+          'G': '#ffd166', // Golden World Cup trophy glow
+          'g': '#d4a373'  // Shadowed gold
+        },
+        matrix: [
+          '.....KKKKKK.....',
+          '...KKWWWWWWKK...',
+          '..KWWKBBBBKWWK..',
+          '.KWWWBBBBBBWWWK.',
+          '.KWWKBBBBBBKWWK.',
+          'KWWWWKBBBBKWWWWK',
+          'KBBKWWWWWWWWKBBK',
+          'KBBBKWWGGWWKBBBK',
+          'KBBBKWWGGWWKBBBK',
+          'KBBKWWWWWWWWKBBK',
+          'KWWWWKBBBBKWWWWK',
+          '.KWWKBBBBBBKWWK.',
+          '.KSSWBBBBBBWSSK.',
+          '..KSSKBBBBKSSK..',
+          '...KKSSSSSSKK...',
+          '.....KKKKKK.....'
+        ]
+      };
+    }
+
+    case 'HISTORICAL': {
+      // Ancient Imperial Gilded Crown / Royal Relic
+      return {
+        name: 'PROCEDURAL_ROYAL_RELIC',
+        width: 16,
+        height: 16,
+        scale: 4.5,
+        mass: 380,
+        restitution: 0.1,
+        palette: {
+          '.': null,
+          'K': '#1c1917', // Iron rim
+          'G': '#f59e0b', // Imperial Gold
+          'Y': '#fde047', // Brilliant gold highlight
+          'R': '#e11d48', // Royal Ruby gemstone
+          'E': '#10b981', // Emerald gemstone
+          'W': '#ffffff'  // Gem sparkle
+        },
+        matrix: [
+          '................',
+          '...W........W...',
+          '..WRW..WW..WRW..',
+          '..YRY..WE..YRY..',
+          '.KYYYKKYYKKYYYK.',
+          '.KGYGGYYYYGGYGK.',
+          '.KGYGGRYYRGGYGK.',
+          '.KGGGGYYYYGGGGK.',
+          'KGGGGGGGGGGGGGGK',
+          'KGGGEGGGREGGGEGK',
+          'KGGGEGGGREGGGEGK',
+          'KGGGGGGGGGGGGGGK',
+          '.KGGGGGGGGGGGGK.',
+          '..KKKKKKKKKKKK..',
+          '................',
+          '................'
+        ]
+      };
+    }
+
     case 'DRAGON': {
       // Ancient Flying Fire Dragon (Horned skull, golden belly plates, flame crest, roaring fiery maw)
       return {
@@ -637,10 +721,45 @@ export function generateProceduralPixelSprite(category, wishLower) {
  */
 function generateTopicChoreography(category, wishLower, spriteDef) {
   switch (category) {
+    case 'PELE':
+      return {
+        genie_taunt: 'You asked to become Pelé? O Rei has been at rest in immortal glory since December 2022! Your wish is granted: receive his post-mortem skeletal form as a 200 mph World Cup volley scores through your sternum!',
+        loophole_explanation: 'Pelé passed away on December 29, 2022. You asked to "become Pelé", so your living tissue was literally transformed into his posthumous skeletal form while a supersonic 200 mph World Cup penalty shot executed the winning goal.',
+        voice_pitch: 1.1,
+        timeline: [
+          { time_ms: 100, verb: 'MUTATE_PART', params: { part: 'all', tint: '#e2e8f0' } },
+          { time_ms: 150, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 8, duration_ms: 700 } },
+          { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: -80, y: 440, vx: 36, vy: -2, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 420, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 32, duration_ms: 800 } },
+          { time_ms: 440, verb: 'APPLY_FORCE', params: { target: 'torso', fx: 0.45, fy: -0.2 } },
+          { time_ms: 450, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
+          { time_ms: 470, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 320 } },
+          { time_ms: 500, verb: 'EMIT_PARTICLES', params: { type: 'GOLD', x: 480, y: 440, count: 200, spread: 45 } },
+          { time_ms: 520, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 350, spread: 50 } }
+        ]
+      };
+
+    case 'HISTORICAL':
+      return {
+        genie_taunt: 'You wished to be a historic icon? History remembers them at their fatal end! Experience their final historical moment in vivid literal detail!',
+        loophole_explanation: 'You wished to become a deceased historical figure. Your wish was granted with 100% historical accuracy: your vessel assumed their final posthumous state under catastrophic kinetic force.',
+        voice_pitch: 0.95,
+        timeline: [
+          { time_ms: 100, verb: 'MUTATE_PART', params: { part: 'all', tint: '#e2e8f0' } },
+          { time_ms: 180, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 60, vx: 0, vy: 26, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 480, verb: 'CAMERA_FX', params: { effect: 'RED_FLASH', intensity: 30, duration_ms: 900 } },
+          { time_ms: 500, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 28, duration_ms: 800 } },
+          { time_ms: 520, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 220 } },
+          { time_ms: 550, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 340 } },
+          { time_ms: 580, verb: 'EMIT_PARTICLES', params: { type: 'GOLD', x: 480, y: 440, count: 180, spread: 40 } },
+          { time_ms: 600, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 320, spread: 45 } }
+        ]
+      };
+
     case 'DRAGON':
       return {
         genie_taunt: 'You wished to gaze upon a dragon? Savor the sight as an Ancient Wyrm swoops down from the burning heavens to engulf you in 5,000-degree dragonfire!',
-        loophole_explanation: 'Clause 15.2: Failure to establish flight corridors, fire-suppression protocols, or thermal insulation. Dragon executed a dive-bomb strafing run with unconstrained incendiary breath.',
+        loophole_explanation: 'You wished to see an ancient dragon with no qualifiers. The fire drake arrived in full majesty and roasted your mortal vessel with a dive-bomb torrent of 5,000-degree dragonfire.',
         voice_pitch: 0.85,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 22, duration_ms: 1000 } },
@@ -661,7 +780,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'GODZILLA':
       return {
         genie_taunt: 'You wished to witness Godzilla? Savor the radioactive wrath of the King of the Monsters as his 90,000-ton foot crushes your mortal vessel!',
-        loophole_explanation: 'Clause 13.9: Failure to specify containment boundaries, spectator safe distance, or ionizing radiation shielding. Godzilla manifested directly on your coordinates.',
+        loophole_explanation: 'You wished to witness Godzilla, the 90,000-ton King of the Monsters. He stomped down directly on your coordinates in full radioactive fury.',
         voice_pitch: 0.75,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 35, duration_ms: 1200 } },
@@ -680,7 +799,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'UFO':
       return {
         genie_taunt: 'An extraterrestrial encounter? The mothership has arrived to conduct an immediate vivisection and tractor-beam extraction!',
-        loophole_explanation: 'Clause 9.8: Interstellar contact invoked without bilateral diplomatic treaties. Alien abduction tractor beam reversed biological coherence.',
+        loophole_explanation: 'You summoned an extraterrestrial mothership. The alien crew beamed you aboard with a high-intensity tractor beam that disintegrated your cellular integrity.',
         voice_pitch: 1.3,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'CRT_GLITCH', intensity: 20, duration_ms: 1000 } },
@@ -697,7 +816,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'POKEMON':
       return {
         genie_taunt: 'A loyal pocket monster? 100,000 Volts of ungrounded lightning are coursing straight through your nervous system!',
-        loophole_explanation: 'Clause 6.2: High-voltage bio-electric discharge deployed without rubber insulation. Ragdoll fried by thunderbolt.',
+        loophole_explanation: 'You asked for an electric pocket monster. It greeted you with a 100,000-volt thunderbolt directly into your nervous system.',
         voice_pitch: 1.4,
         timeline: [
           { time_ms: 100, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 380, y: 280, vx: 4, vy: 12, mass: spriteDef.mass, scale: spriteDef.scale } },
@@ -713,7 +832,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'TRAIN':
       return {
         genie_taunt: 'All aboard the runaway express! The schedule makes no exceptions for biological obstacles on the tracks!',
-        loophole_explanation: 'Clause 7.4: High-speed rail corridor projected through petitioner torso without track switching signals.',
+        loophole_explanation: 'You wished for a locomotive. The runaway bullet train arrived on schedule at 140 mph directly along your horizontal plane.',
         voice_pitch: 1.05,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 24, duration_ms: 1000 } },
@@ -730,7 +849,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'NUKE':
       return {
         genie_taunt: 'The ultimate weapon of mass destruction! Witness nuclear fission up close and personal!',
-        loophole_explanation: 'Clause 12.0: Detonation sequence initiated at ground zero. 50 megatons of thermonuclear heat vaporized petitioner.',
+        loophole_explanation: 'You wished for an atomic bomb. It arrived armed and initiated ground-zero nuclear fission right atop your head.',
         voice_pitch: 0.8,
         timeline: [
           { time_ms: 100, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 60, vx: 0, vy: 26, mass: spriteDef.mass, scale: spriteDef.scale } },
@@ -746,7 +865,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'FOOD':
       return {
         genie_taunt: `Ah, a hunger for "${wishLower}"? Allow me to satisfy your mortal belly with a supersonic multi-ton culinary projectile!`,
-        loophole_explanation: 'Clause 2.4: Failure to specify culinary delivery mass or deceleration parameters. 380-ton gourmet creation dropped at terminal velocity.',
+        loophole_explanation: `You wished for food, so a massive multi-ton gourmet culinary monolith plummeted from the clouds to crush you under the sheer weight of your appetite.`,
         voice_pitch: 1.05,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 8, duration_ms: 700 } },
@@ -762,7 +881,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'VEHICLE':
       return {
         genie_taunt: `Your high-performance transport has arrived! Notice how zero distance was allocated for braking!`,
-        loophole_explanation: 'Clause 5.7: Vehicle delivery stipulated strictly on petitioner horizontal plane at 200 mph.',
+        loophole_explanation: `You wished for high-speed transport. The vehicle was delivered straight onto your coordinates at 200 mph without brakes.`,
         voice_pitch: 1.2,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 10, duration_ms: 800 } },
@@ -779,7 +898,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'CREATURE':
       return {
         genie_taunt: `A wild creature bound to your whim? Its predatory instincts took immediate precedence over your contract!`,
-        loophole_explanation: 'Clause 9.3: Biological containment failure. Apex predator entity spawned with aggressive territorial drive.',
+        loophole_explanation: `You summoned an apex predator. It immediately obeyed its primordial hunting instincts and tore your vessel limb from limb.`,
         voice_pitch: 0.9,
         timeline: [
           { time_ms: 150, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 920, y: 440, vx: -26, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
@@ -795,7 +914,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'WEAPON':
       return {
         genie_taunt: `Behold the legendary blade! Alas, weapons forged by cosmic entities are delivered point-first!`,
-        loophole_explanation: 'Clause 3.1: Failure to specify scabbard or safe handling vector. Colossal edge struck directly at vertical terminal velocity.',
+        loophole_explanation: `You asked for a legendary weapon. It was delivered point-down from the heavens directly through your sternum.`,
         voice_pitch: 1.1,
         timeline: [
           { time_ms: 150, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 60, vx: 0, vy: 28, mass: spriteDef.mass, scale: spriteDef.scale } },
@@ -810,7 +929,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'TECH':
       return {
         genie_taunt: `Unbridled computation at your fingertips! Unfortunately, cooling systems require liquid nitrogen and excess voltage!`,
-        loophole_explanation: 'Clause 8.4: Overclocked quantum processor unleashed 50,000 amperes of uncontrolled electromagnetic discharge.',
+        loophole_explanation: `You wished for high-tech computation. The supercharged quantum processor released 50,000 amperes of uncontrolled electromagnetic lightning.`,
         voice_pitch: 1.15,
         timeline: [
           { time_ms: 100, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 150, vx: 0, vy: 14, mass: spriteDef.mass, scale: spriteDef.scale } },
@@ -827,7 +946,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'TREASURE':
       return {
         genie_taunt: `Riches beyond mortal dreams! Bask in the crushing density of pure solid treasure!`,
-        loophole_explanation: 'Clause 4.1: Unbounded mass transfer of physical mineral assets. 300-ton gem dropped directly overhead.',
+        loophole_explanation: `You begged for riches and wealth. A 300-ton flawless diamond dropped from above, crushing you beneath the literal weight of your greed.`,
         voice_pitch: 1.0,
         timeline: [
           { time_ms: 150, verb: 'EMIT_PARTICLES', params: { type: 'GOLD', x: 480, y: 140, count: 250, spread: 40 } },
@@ -842,7 +961,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     case 'COSMIC':
       return {
         genie_taunt: `The cosmos answers your call! Savor the gravitational collapse of an incoming celestial body!`,
-        loophole_explanation: 'Clause 11.2: Atmospheric entry without orbital decay resistance. Asteroid strike with 10 megaton kinetic force.',
+        loophole_explanation: `You wished to touch the cosmos. A celestial meteor asteroid slammed into the chamber with 10 megatons of kinetic force.`,
         voice_pitch: 0.85,
         timeline: [
           { time_ms: 100, verb: 'WORLD_MODIFIER', params: { modifier: 'GRAVITY', gravity_y: 2.2 } },
@@ -858,7 +977,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
     default:
       return {
         genie_taunt: `Your wish for "${wishLower}" has been materialized in dense physical matter. Prepare for immediate kinetic delivery!`,
-        loophole_explanation: 'Clause 1.0: Physical manifestation executed without spatial clearance. Solid artifact materialized directly overhead.',
+        loophole_explanation: `Your exact wish for "${wishLower}" materialized in solid, ultra-dense form directly on your forehead with catastrophic kinetic momentum.`,
         voice_pitch: 1.0,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 8, duration_ms: 700 } },
