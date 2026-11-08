@@ -9,6 +9,7 @@ import SettingsModal from './components/SettingsModal';
 import { THEME_SETS, DEFAULT_CUSTOMIZATION, getAvailableThemes } from './data/themes';
 import { audioSynth } from './engine/audioSynth';
 import { choreographyRunner } from './engine/choreographyRunner';
+import { vfxSystem } from './engine/vfxSystem';
 import { interpretWishWithDirector } from './services/llmDirector';
 import {
   Palette,
@@ -124,6 +125,7 @@ export default function App() {
 
     setIsExecuting(true);
     setActiveCertificate(null);
+    vfxSystem.spawnEmote(480, 400, 'QUESTION');
 
     setCurrentDialogue({
       speaker: customization?.player?.name || 'Player',
@@ -166,6 +168,8 @@ export default function App() {
 
     if (scenario.survived) {
       audioSynth.playChime();
+      vfxSystem.spawnEmote(480, 400, 'HEART');
+      vfxSystem.spawnFloatingText(480, 360, 'AIRTIGHT SURVIVAL!', '#10b981', 18);
       const newSurvivedCount = survivedWishesCount + 1;
       setSurvivedWishesCount(newSurvivedCount);
 
@@ -191,6 +195,7 @@ export default function App() {
       }
     } else {
       audioSynth.playLaugh();
+      vfxSystem.spawnFloatingText(480, 360, 'WISH TWISTED!', '#ef233c', 18);
       setWishNumber(1);
       setSurvivedWishesCount(0);
     }

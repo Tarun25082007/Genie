@@ -2,6 +2,7 @@
 import Matter from 'matter-js';
 import { audioSynth } from './audioSynth.js';
 import { CELL_TYPES } from './cellularAutomata.js';
+import { vfxSystem } from './vfxSystem.js';
 
 const { Bodies, Body, Constraint, Composite } = Matter;
 
@@ -37,6 +38,14 @@ export class PlayerRagdoll {
     this.isDead = false;
     this.state = 'CALM'; // 'CALM' | 'PANIC' | 'SQUASHED' | 'BURNING' | 'FROZEN' | 'STRETCHED'
 
+    // Terraria & Stardew Valley expressive life properties
+    this.hurtFlashFrames = 0;
+    this.breathCycle = Math.random() * Math.PI * 2;
+    this.breathScale = 1.0;
+    this.isLookingUp = false;
+    this.hasAlerted = false;
+    this.hasPanicked = false;
+
     this.initRagdoll(startX, startY);
   }
 
@@ -64,10 +73,19 @@ export class PlayerRagdoll {
 
   squash(caEngine = null, synth = audioSynth) {
     this.setRagdollState('SQUASHED', synth);
+    this.hurtFlashFrames = 8;
+    this.isDead = true;
+    vfxSystem.triggerHitStop(4);
+
+    if (this.parts.torso) {
+      vfxSystem.spawnFloatingText(this.parts.torso.position.x, this.parts.torso.position.y - 15, 'SPLAT!', '#ef233c', 20);
+      vfxSystem.spawnSoul(this.parts.torso.position.x, this.parts.torso.position.y);
+    }
+
     if (caEngine && this.parts.torso) {
       const gx = Math.floor(this.parts.torso.position.x / 3);
       const gy = Math.floor(this.parts.torso.position.y / 3);
-      caEngine.spawnCircle(gx, gy, 6, CELL_TYPES.BLOOD, 4);
+      caEngine.spawnCircle(gx, gy, 8, CELL_TYPES.BLOOD, 6);
     }
   }
 
@@ -335,8 +353,14 @@ export class PlayerRagdoll {
         });
       }
 
+      this.hurtFlashFrames = 6;
+      vfxSystem.spawnFloatingText(bodyA.position.x, bodyA.position.y - 12, 'CRUNCH!', '#ffd166', 15);
+      vfxSystem.triggerHitStop(2);
+
       if (jointName === 'neck') {
         this.isDead = true;
+        vfxSystem.spawnSoul(bodyA.position.x, bodyA.position.y);
+        vfxSystem.spawnFloatingText(bodyA.position.x, bodyA.position.y - 30, '-999,999', '#ef233c', 18);
       }
     }
   }
@@ -408,6 +432,10 @@ export class PlayerRagdoll {
 
     const pos = { x: body.position.x, y: body.position.y };
 
+    vfxSystem.spawnFloatingText(pos.x, pos.y - 20, 'GIBBED!', '#ef233c', 20);
+    vfxSystem.triggerHitStop(4);
+    vfxSystem.spawnSoul(pos.x, pos.y);
+
     // Emit 450 BLOOD cells in CA engine
     if (caEngine) {
       caEngine.spawnCircle(pos.x, pos.y, 45, CELL_TYPES.BLOOD, 60, 0, 0);
@@ -417,31 +445,34 @@ export class PlayerRagdoll {
     Composite.remove(this.world, body);
     delete this.parts[partName];
 
-    // Spawn 8 small meat-chunk rigid bodies with radial outward velocity
+    // Spawn 8 Terraria gib rigid bodies (bones with marrow, rolling eyeballs, flesh chunks)
+    const gibTypes = ['bone', 'eyeball', 'flesh', 'flesh', 'bone', 'flesh', 'flesh', 'flesh'];
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2 + (Math.random() * 0.4 - 0.2);
       const speed = 6 + Math.random() * 8;
+      const gibType = gibTypes[i % gibTypes.length];
       const chunk = Bodies.rectangle(
         pos.x + Math.cos(angle) * 12,
         pos.y + Math.sin(angle) * 12,
-        8,
-        8,
+        gibType === 'bone' ? 12 : gibType === 'eyeball' ? 8 : 8,
+        gibType === 'bone' ? 6 : gibType === 'eyeball' ? 8 : 8,
         {
           density: 0.003,
-          restitution: 0.3,
+          restitution: gibType === 'eyeball' ? 0.6 : 0.25,
           friction: 0.8,
-          label: 'meat_chunk'
+          label: `gib_${gibType}`
         }
       );
       Body.setVelocity(chunk, {
         x: Math.cos(angle) * speed,
         y: Math.sin(angle) * speed - 4
       });
-      Body.setAngularVelocity(chunk, (Math.random() - 0.5) * 0.3);
+      Body.setAngularVelocity(chunk, (Math.random() - 0.5) * 0.4);
 
       this.meatChunks.push({
         body: chunk,
-        life: 240
+        gibType,
+        life: 280
       });
 
       Composite.add(this.world, chunk);
@@ -480,11 +511,55 @@ export class PlayerRagdoll {
     }
   }
 
-  update(cellularGrid = null, worldWidth = 960, worldHeight = 540) {
-    // 1. Natural Stress Severing & Posture Update
+  update(cellularGrid = null, worldWidth = 960, worldHeight = 540, dangerPos = null) {
+    // 1. Idle breathing cycle when alive and intact
+    if (!this.isDead && this.state !== 'SQUASHED') {
+      this.breathCycle = (this.breathCycle || 0) + 0.055;
+      this.breathScale = 1.0 + Math.sin(this.breathCycle) * 0.038;
+    } else {
+      this.breathScale = 1.0;
+    }
+
+    if (this.hurtFlashFrames > 0) {
+      this.hurtFlashFrames--;
+    }
+
+    // 2. Terraria / Stardew Eye Tracking & Emotes (Look up at falling objects)
+    if (dangerPos && this.parts.head && !this.isDead && this.state !== 'SQUASHED') {
+      const headX = this.parts.head.position.x;
+      const headY = this.parts.head.position.y;
+      const dx = dangerPos.x - headX;
+      const dy = dangerPos.y - headY;
+      const dist = Math.hypot(dx, dy);
+
+      if (dy < 0 && Math.abs(dx) < 160) {
+        this.isLookingUp = true;
+
+        if (dist < 260 && !this.hasAlerted) {
+          this.hasAlerted = true;
+          vfxSystem.spawnEmote(headX, headY, 'SWEAT');
+        }
+
+        if (dist < 130 && !this.hasPanicked) {
+          this.hasPanicked = true;
+          this.state = 'PANIC';
+          vfxSystem.spawnEmote(headX, headY, 'SKULL');
+        }
+      } else {
+        this.isLookingUp = false;
+      }
+    } else {
+      this.isLookingUp = false;
+      if (!dangerPos) {
+        this.hasAlerted = false;
+        this.hasPanicked = false;
+      }
+    }
+
+    // 3. Natural Stress Severing & Posture Update
     this.checkJointStress(cellularGrid, audioSynth);
 
-    // 2. Stump Blood Spurts
+    // 4. Stump Blood Spurts
     if (cellularGrid) {
       const scaleX = (cellularGrid.cols || 320) / worldWidth;
       const scaleY = (cellularGrid.rows || 180) / worldHeight;
@@ -515,7 +590,7 @@ export class PlayerRagdoll {
       this.stumps = this.stumps.filter((s) => s.bloodTicks > 0);
     }
 
-    // 3. Clean up decaying meat chunks
+    // 5. Clean up decaying meat chunks
     this.meatChunks.forEach((chunk) => {
       chunk.life--;
       if (chunk.life <= 0) {
@@ -536,12 +611,22 @@ export class PlayerRagdoll {
       ctx.translate(body.position.x, body.position.y);
       ctx.rotate(body.angle);
 
-      if (this.state === 'SQUASHED') {
-        ctx.scale(2.2, 0.22);
+      // Idle chest breathing
+      if (body === p.torso && !this.isDead && this.state !== 'SQUASHED') {
+        ctx.scale(1.0, this.breathScale || 1.0);
       }
 
-      const bodyKey = Object.keys(this.parts).find((k) => this.parts[k] === body);
-      ctx.fillStyle = this.partTints[bodyKey] || defaultColor;
+      if (this.state === 'SQUASHED') {
+        ctx.scale(3.2, 0.16);
+      }
+
+      // Terraria Hurt Flash White/Red
+      if (this.hurtFlashFrames > 0) {
+        ctx.fillStyle = this.hurtFlashFrames % 2 === 0 ? '#ffffff' : '#ef233c';
+      } else {
+        const bodyKey = Object.keys(this.parts).find((k) => this.parts[k] === body);
+        ctx.fillStyle = this.partTints[bodyKey] || defaultColor;
+      }
       ctx.fillRect(-w / 2, -h / 2, w, h);
 
       if (this.state === 'FROZEN') {
@@ -562,15 +647,43 @@ export class PlayerRagdoll {
       ctx.restore();
     };
 
-    // Render Meat Chunks
+    // Render Meat Chunks (Terraria Gibs: Bones with marrow, bouncing eyeballs, flesh)
     this.meatChunks.forEach((chunk) => {
       ctx.save();
       ctx.translate(chunk.body.position.x, chunk.body.position.y);
       ctx.rotate(chunk.body.angle);
-      ctx.fillStyle = '#9d0208';
-      ctx.fillRect(-4, -4, 8, 8);
-      ctx.fillStyle = '#f8f9fa';
-      ctx.fillRect(-1, -1, 3, 3);
+
+      if (chunk.gibType === 'bone') {
+        // Pixel Bone with crimson joints
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(-6, -2, 12, 4);
+        ctx.fillStyle = '#ef233c';
+        ctx.fillRect(-7, -3, 3, 6);
+        ctx.fillRect(4, -3, 3, 6);
+      } else if (chunk.gibType === 'eyeball') {
+        // Eyeball rolling along floor
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(-1, -2, 3, 3);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, -1, 1.5, 1.5);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-3, 1);
+        ctx.lineTo(-7, 3);
+        ctx.stroke();
+      } else {
+        // Flesh chunk
+        ctx.fillStyle = '#9d0208';
+        ctx.fillRect(-4, -4, 8, 8);
+        ctx.fillStyle = '#f8f9fa';
+        ctx.fillRect(-1, -1, 3, 3);
+      }
+
       ctx.restore();
     });
 
@@ -592,10 +705,14 @@ export class PlayerRagdoll {
       ctx.rotate(p.head.angle);
 
       if (this.state === 'SQUASHED') {
-        ctx.scale(2.2, 0.22);
+        ctx.scale(3.2, 0.16);
       }
 
-      const headTint = this.partTints.head || (this.state === 'FROZEN' ? '#a5f3fc' : c.skin);
+      // Hurt flash or skin tint
+      const headTint = this.hurtFlashFrames > 0
+        ? (this.hurtFlashFrames % 2 === 0 ? '#ffffff' : '#ef233c')
+        : (this.partTints.head || (this.state === 'FROZEN' ? '#a5f3fc' : c.skin));
+
       ctx.fillStyle = headTint;
       ctx.fillRect(-12, -12, 24, 24);
 
@@ -619,10 +736,24 @@ export class PlayerRagdoll {
           ctx.lineTo(ex - 3, ey + 3);
           ctx.stroke();
         });
-        // Squashed mouth
+        // Squashed tongue/mouth
         ctx.fillStyle = '#ef233c';
         ctx.beginPath();
         ctx.arc(0, 5, 4, 0, Math.PI);
+        ctx.fill();
+      } else if (this.isLookingUp) {
+        // Looking UP in terror at falling doom!
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-8, -6, 6, 6);
+        ctx.fillRect(2, -6, 6, 6);
+        // Pupils rolled straight to top
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(-6, -6, 2.5, 2.5);
+        ctx.fillRect(4, -6, 2.5, 2.5);
+        // Screaming mouth
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(0, 4, 3.5, 4.5, 0, 0, Math.PI * 2);
         ctx.fill();
       } else if (isPanicking) {
         // Panic wide eyes
@@ -636,10 +767,20 @@ export class PlayerRagdoll {
         ctx.fillStyle = '#000000';
         ctx.fillRect(-3, 3, 6, 6);
       } else {
-        // Normal calm eyes
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(-7, -3, 3, 3);
-        ctx.fillRect(4, -3, 3, 3);
+        // Normal calm eyes with animated blinking!
+        const isBlinking = (Math.floor(performance.now() / 140) % 24) === 0;
+        if (isBlinking) {
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-8, -2); ctx.lineTo(-3, -2);
+          ctx.moveTo(3, -2); ctx.lineTo(8, -2);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(-7, -3, 3, 3);
+          ctx.fillRect(4, -3, 3, 3);
+        }
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 1.5;
         ctx.beginPath();

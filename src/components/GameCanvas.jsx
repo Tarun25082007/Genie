@@ -7,6 +7,7 @@ import { createPropFromVerb, renderPropBody } from '../engine/proceduralProps';
 import { choreographyRunner } from '../engine/choreographyRunner';
 import { drawPixelSprite } from '../data/themes';
 import { audioSynth } from '../engine/audioSynth';
+import { vfxSystem } from '../engine/vfxSystem';
 
 const { Engine, World, Bodies, Body, Composite, Constraint, Mouse, MouseConstraint } = Matter;
 
@@ -56,6 +57,11 @@ export default function GameCanvas({
   // Re-spawns player ragdoll and clears chamber props on next wish or reset
   const resetSandboxStage = (engine, custom) => {
     if (!engine) return;
+
+    // Trigger Stardew/Terraria Alert emote on fresh ragdoll
+    vfxSystem.spawnEmote(480, 400, 'ALERT');
+    vfxSystem.debris = [];
+    vfxSystem.shockwaves = [];
 
     // Remove existing dynamic props
     propsRef.current.forEach((b) => World.remove(engine.world, b));
@@ -282,6 +288,9 @@ export default function GameCanvas({
       const fx = choreographyRunner.cameraFX;
       const mods = choreographyRunner.worldModifiers;
 
+      // Advance Terraria/Stardew VFX Engine (Returns true during crunchy hit-stop micro-freeze)
+      const isFrozen = vfxSystem.update(dt);
+
       // Apply Persistent World Modifiers
       if (engine) {
         engine.gravity.x = mods.gravity.x;
@@ -369,9 +378,21 @@ export default function GameCanvas({
         }
       }
 
-      // 2. Physics Step & Aerodynamic/Buoyant custom forces
-      if (engine) {
+      // 2. Physics Step & Aerodynamic/Buoyant custom forces (Pauses during hit-stop)
+      if (engine && !isFrozen) {
         propsRef.current.forEach((b) => {
+          // Record aerodynamic speed lines & re-entry friction glow
+          vfxSystem.recordSpeedStreak(b, b.customData?.spriteKey);
+
+          // Terraria Ground Impact Detection (Shockwave + Food/Spark Debris Explosion)
+          if (b.position.y >= 470 && b.velocity.y > 4.5 && !b.hasImpactedFloor) {
+            b.hasImpactedFloor = true;
+            const intensity = Math.min(2.5, (b.mass || 100) / 110);
+            vfxSystem.spawnImpactDebris(b.position.x, 504, b.customData?.spriteKey || b.customData?.propType, intensity);
+            vfxSystem.triggerHitStop(2);
+            audioSynth.playThud(Math.min(1.0, intensity * 0.45));
+          }
+
           if (b.customData?.buoyant) {
             Body.applyForce(b, b.position, {
               x: Math.sin(currentTime * 0.003) * 0.0015,
@@ -392,9 +413,17 @@ export default function GameCanvas({
         Engine.update(engine, dt * 1000);
       }
 
-      // 3. Update Ragdoll Stress Severing, Stumps & Posture
+      // 3. Update Ragdoll Stress Severing, Stumps & Posture (with overhead danger tracking)
       if (ragdoll) {
-        ragdoll.update(cellular, CANVAS_WIDTH, CANVAS_HEIGHT);
+        const nearestFallingProp = propsRef.current.find(
+          (b) => b.position.y < 420 && Math.abs(b.position.x - 480) < 160 && b.velocity.y > 2.5
+        );
+        ragdoll.update(
+          cellular,
+          CANVAS_WIDTH,
+          CANVAS_HEIGHT,
+          nearestFallingProp ? nearestFallingProp.position : null
+        );
       }
 
       // 4. Update Cellular Automata Grid & Solid Mask Coupling
@@ -528,15 +557,40 @@ export default function GameCanvas({
         });
       }
 
-      // Decorative Torches on Walls
-      mCtx.fillStyle = chamber.torchFlame;
-      mCtx.shadowColor = chamber.torchFlame;
-      mCtx.shadowBlur = 15;
-      mCtx.beginPath();
-      mCtx.arc(50, 220, 6, 0, Math.PI * 2);
-      mCtx.arc(CANVAS_WIDTH - 50, 220, 6, 0, Math.PI * 2);
-      mCtx.fill();
-      mCtx.shadowBlur = 0;
+      // Animated 16-Bit Torches on Walls (Dynamic radial lighting gradient + flickering flame tongue)
+      const flameFlicker = Math.sin(currentTime * 0.014) * 4;
+      [50, CANVAS_WIDTH - 50].forEach((tx) => {
+        // Torch Dynamic Radial Light Gradient (Terraria Wall Torch Lighting)
+        const torchLight = mCtx.createRadialGradient(tx, 220, 4, tx, 220, 115 + flameFlicker);
+        torchLight.addColorStop(0, (chamber.torchFlame || '#f97316') + '55');
+        torchLight.addColorStop(0.5, (chamber.torchFlame || '#f97316') + '15');
+        torchLight.addColorStop(1, 'rgba(0,0,0,0)');
+        mCtx.fillStyle = torchLight;
+        mCtx.beginPath();
+        mCtx.arc(tx, 220, 115 + flameFlicker, 0, Math.PI * 2);
+        mCtx.fill();
+
+        // Pixel Torch Iron Bracket
+        mCtx.fillStyle = '#475569';
+        mCtx.fillRect(tx - 3, 224, 6, 14);
+
+        // Animated Multi-Stage Flame Tongue
+        mCtx.fillStyle = chamber.torchFlame || '#f97316';
+        mCtx.beginPath();
+        mCtx.moveTo(tx - 5, 224);
+        mCtx.quadraticCurveTo(tx + flameFlicker * 0.5, 206 - Math.abs(flameFlicker), tx, 200);
+        mCtx.quadraticCurveTo(tx - flameFlicker * 0.5, 206, tx + 5, 224);
+        mCtx.fill();
+
+        // Inner Yellow/White Hot Core
+        mCtx.fillStyle = '#fef08a';
+        mCtx.beginPath();
+        mCtx.arc(tx, 218, 2.5, 0, Math.PI * 2);
+        mCtx.fill();
+      });
+
+      // Procedural Floor Cracks from Heavy Impact Collisions
+      vfxSystem.renderCracks(mCtx);
 
       // BLACK_HOLE Accretion Disk Rendering
       if (mods.blackHole) {
@@ -568,7 +622,7 @@ export default function GameCanvas({
       }
 
       // Render Floating Genie Entity at x = 220, y = 220
-      renderGenieEntity(mCtx, genie, theme, genieCustom);
+      renderGenieEntity(mCtx, genie, theme, genieCustom, currentTime);
 
       // Render Active Constraints
       mCtx.strokeStyle = '#f8f9fa';
@@ -591,6 +645,9 @@ export default function GameCanvas({
       if (ragdoll) {
         ragdoll.render(mCtx);
       }
+
+      // Render Terraria & Stardew Valley Layer (Debris, Shockwaves, Emotes, Combat Text, Dust Motes)
+      vfxSystem.render(mCtx);
 
       // Camera FX: Red Gore Flash
       if (fx.redGoreFlash > 0) {
@@ -618,18 +675,52 @@ export default function GameCanvas({
     };
   }, [theme, customization, activeTool, settings]);
 
-  const renderGenieEntity = (ctx, genie, th, genieCustom) => {
+  const renderGenieEntity = (ctx, genie, th, genieCustom, currentTime = 0) => {
     ctx.save();
     const archetype = genieCustom.archetype || th.genieDefaults?.archetype || 'DJINN_CLASSIC';
     const primary = genieCustom.primaryColor || th.genieDefaults?.primaryColor || '#06b6d4';
     const secondary = genieCustom.secondaryColor || th.genieDefaults?.secondaryColor || '#f59e0b';
     const eyeColor = genieCustom.eyeColor || th.genieDefaults?.eyeColor || '#fef08a';
+    const isCasting = choreographyRunner.isPlaying;
     const relic = genieCustom.relic || th.genieDefaults?.relic || (
       th.id === 'shenron_dragon' ? 'DRAGON_BALL' : th.id === 'corporate_demon' ? 'BLOOD_CONTRACT' : 'MAGIC_LAMP'
     );
 
     // Relic on ground below Genie
     drawPixelSprite(ctx, relic, genie.x - 24, 456, 48);
+
+    // Relic radiant glow rings when casting
+    if (isCasting) {
+      const relicPulse = Math.sin(currentTime * 0.008) * 8;
+      ctx.save();
+      ctx.strokeStyle = secondary;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.65;
+      ctx.beginPath();
+      ctx.arc(genie.x, 480, 24 + relicPulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Cosmic Energy Lightning Conduit from Genie to Prop Spawn Rift
+    if (isCasting) {
+      ctx.save();
+      ctx.strokeStyle = primary;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = primary;
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.moveTo(genie.x + 24, genie.y - 24);
+      const steps = 7;
+      for (let s = 1; s <= steps; s++) {
+        const t = s / steps;
+        const lx = (genie.x + 24) + (480 - (genie.x + 24)) * t + (Math.random() - 0.5) * 16;
+        const ly = (genie.y - 24) + (80 - (genie.y - 24)) * t + (Math.random() - 0.5) * 16;
+        ctx.lineTo(lx, ly);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // Smoke Tail Particles
     genie.smokeParticles.forEach((sp) => {
@@ -659,9 +750,9 @@ export default function GameCanvas({
     ctx.translate(genie.x, genie.y);
 
     // Aura Glow
-    const auraRadius = archetype === 'DRAGON_SUPER' ? 85 : 65;
+    const auraRadius = archetype === 'DRAGON_SUPER' ? 95 : isCasting ? 85 : 65;
     const aura = ctx.createRadialGradient(0, 0, 8, 0, 0, auraRadius);
-    aura.addColorStop(0, primary + '88');
+    aura.addColorStop(0, primary + (isCasting ? 'bb' : '88'));
     aura.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = aura;
     ctx.beginPath();
@@ -697,7 +788,7 @@ export default function GameCanvas({
     }
     ctx.fill();
 
-    // Torso Muscle / Accent lines
+    // Torso Muscle / Accent lines / Spellcasting Arms
     if (archetype === 'DRAGON_PORUNGA') {
       ctx.strokeStyle = secondary;
       ctx.lineWidth = 3;
@@ -708,7 +799,7 @@ export default function GameCanvas({
       ctx.arc(14, 8, 10, 0.2, Math.PI - 0.2);
       ctx.stroke();
       // Shoulder spikes
-      ctx.fillStyle = '#1e293b';
+      ctx.fillStyle = '#0f172a';
       [[-36, 4], [36, 4]].forEach(([sx, sy]) => {
         ctx.beginPath();
         ctx.moveTo(sx, sy);
@@ -718,13 +809,61 @@ export default function GameCanvas({
         ctx.fill();
       });
     } else {
-      // Crossed Arms
-      ctx.strokeStyle = secondary;
-      ctx.lineWidth = 8;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.arc(0, 16, 20, 0.2, Math.PI - 0.2);
-      ctx.stroke();
+      // Arms: If casting, raise in Boss Spellcasting Stance; otherwise crossed arms
+      if (isCasting) {
+        ctx.strokeStyle = secondary;
+        ctx.lineWidth = 7;
+        ctx.lineCap = 'round';
+        // Left arm raised
+        ctx.beginPath();
+        ctx.moveTo(-16, 8);
+        ctx.quadraticCurveTo(-34, -10, -26, -24);
+        ctx.stroke();
+        // Right arm raised
+        ctx.beginPath();
+        ctx.moveTo(16, 8);
+        ctx.quadraticCurveTo(34, -10, 26, -24);
+        ctx.stroke();
+
+        // Glowing Spellcasting Hand Orbs
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = secondary;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(-26, -24, 6, 0, Math.PI * 2);
+        ctx.arc(26, -24, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else {
+        // Crossed Arms (Calm Idle)
+        ctx.strokeStyle = secondary;
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(0, 16, 20, 0.2, Math.PI - 0.2);
+        ctx.stroke();
+      }
+    }
+
+    // Rotating 3D Arcane Summoning Glyphs (Terraria Boss Aura)
+    if (isCasting) {
+      const glyphs = ['✦', '룬', '✧', '◈', '⬡', '★'];
+      const time = currentTime * 0.0035;
+      glyphs.forEach((gl, idx) => {
+        const gAngle = time + (idx / glyphs.length) * Math.PI * 2;
+        const gx = Math.cos(gAngle) * 50;
+        const gy = -26 + Math.sin(gAngle) * 14;
+        const gScale = 0.7 + Math.sin(gAngle + Math.PI / 2) * 0.35;
+        ctx.save();
+        ctx.font = `bold ${Math.floor(14 * gScale)}px sans-serif`;
+        ctx.fillStyle = secondary;
+        ctx.shadowColor = secondary;
+        ctx.shadowBlur = 10;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(gl, gx, gy);
+        ctx.restore();
+      });
     }
 
     // Head
