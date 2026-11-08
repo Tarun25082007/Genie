@@ -256,6 +256,7 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
     'CAMERA_FX'
   ]);
 
+  const fallbackScenario = analyzeHeuristicWish(originalWish);
   const timeline = Array.isArray(parsed.choreography_timeline) && parsed.choreography_timeline.length > 0
     ? parsed.choreography_timeline
         .filter((step) => step && typeof step.time_ms === 'number' && validVerbs.has(step.verb))
@@ -264,12 +265,7 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
           verb: step.verb,
           params: step.params || {}
         }))
-    : [
-        { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'ANVIL', x: 480, y: 90, vx: 0, vy: 22, mass: 120, scale: 4, count: 1 } },
-        { time_ms: 600, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 120 } },
-        { time_ms: 650, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 20, duration_ms: 800 } },
-        { time_ms: 700, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 200, spread: 30 } }
-      ];
+    : fallbackScenario.choreography_timeline;
 
   return {
     wishText: originalWish,

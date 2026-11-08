@@ -516,6 +516,74 @@ export class AudioSynth {
     osc.stop(now + 0.36);
   }
 
+  // Discordant Piano Crash (Catastrophic keys cluster)
+  playPianoCrash() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const cluster = [130.81, 138.59, 146.83, 277.18, 293.66, 311.13, 554.37, 587.33, 622.25];
+
+    cluster.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = idx % 2 === 0 ? 'triangle' : 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now + Math.random() * 0.04);
+
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 1.25);
+    });
+    this.playThud(1.5);
+  }
+
+  // Resonant Deep Church Bell Gong
+  playBellGong() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const bellFrequencies = [220, 440, 545, 680, 890];
+
+    bellFrequencies.forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+
+      const amp = 0.25 / (i + 1);
+      gain.gain.setValueAtTime(amp, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 2.3);
+    });
+  }
+
+  // High-voltage Plasma / Ki Disintegration Beam
+  playLaserDisintegrate() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(1400, now);
+    osc.frequency.exponentialRampToValueAtTime(120, now + 0.4);
+
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.46);
+  }
+
   playButton() {
     this.playVoiceBlip(600, 0);
   }

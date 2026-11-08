@@ -202,6 +202,28 @@ export function createPropFromVerb(params, customPropDef) {
         label: 'prop_deer'
       });
       body.customData = { propType: 'deer', width: w, height: h, spriteKey: 'HORNED_DEER', scale, charge: true };
+    } else if (rawProp.includes('PIANO')) {
+      const scale = params.scale || 4.5;
+      const w = 22 * scale;
+      const h = 16 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 550,
+        restitution: 0.1,
+        friction: 0.8,
+        label: 'prop_piano'
+      });
+      body.customData = { propType: 'piano', width: w, height: h, spriteKey: 'GRAND_PIANO', scale };
+    } else if (rawProp.includes('BELL')) {
+      const scale = params.scale || 4.5;
+      const w = 18 * scale;
+      const h = 20 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 600,
+        restitution: 0.15,
+        friction: 0.85,
+        label: 'prop_bell'
+      });
+      body.customData = { propType: 'bell', width: w, height: h, spriteKey: 'GIANT_BELL', scale };
     } else if (rawProp.includes('SARCOPHAGUS') || rawProp.includes('COFFIN') || rawProp.includes('TOMB')) {
       const scale = params.scale || 4.5;
       const w = 18 * scale;

@@ -412,7 +412,23 @@ export default function GameCanvas({
             const intensity = Math.min(2.5, (b.mass || 100) / 110);
             vfxSystem.spawnImpactDebris(b.position.x, 504, b.customData?.spriteKey || b.customData?.propType, intensity);
             vfxSystem.triggerHitStop(2);
-            audioSynth.playThud(Math.min(1.0, intensity * 0.45));
+
+            const pKey = String(b.customData?.spriteKey || b.customData?.propType || '').toUpperCase();
+            if (pKey.includes('PIANO')) {
+              audioSynth.playPianoCrash();
+            } else if (pKey.includes('BELL')) {
+              audioSynth.playBellGong();
+            } else if (pKey.includes('CAR')) {
+              audioSynth.playCarCrash();
+            } else if (pKey.includes('SANDWICH')) {
+              audioSynth.playSplat();
+            } else if (pKey.includes('DEER')) {
+              audioSynth.playStampede();
+            } else if (pKey.includes('SAFE')) {
+              audioSynth.playSafeImpact();
+            } else {
+              audioSynth.playThud(Math.min(1.0, intensity * 0.45));
+            }
           }
 
           if (b.customData?.buoyant) {

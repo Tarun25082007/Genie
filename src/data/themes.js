@@ -1225,6 +1225,62 @@ export const PIXEL_SPRITES = {
       '..cccccccccccc..',
       '................'
     ]
+  },
+  GRAND_PIANO: {
+    palette: {
+      '.': null,
+      'K': '#0f172a',
+      'k': '#1e293b',
+      'W': '#f8fafc',
+      'b': '#020617',
+      'G': '#ffd166'
+    },
+    matrix: [
+      '....KKKKKKKKKK..',
+      '...KKKKKKKKKKKK.',
+      '..KKKKKKKKKKKKKK',
+      '.KKKKKKKKKKKKKKK',
+      'KKKKKKKKKKKKKKKK',
+      'KKKKKKKKKKKKKKKK',
+      'KKKKKKKKKKKKKKKK',
+      'KKKKKKKKKKKKKKKK',
+      'KKKKKKKKKKKKKKKK',
+      'KKKKKKKKKKKKKKKK',
+      'KKGGGGGGGGGGGGKK',
+      'WWbWWbWWbWWbWWbW',
+      'WWbWWbWWbWWbWWbW',
+      'WWbWWbWWbWWbWWbW',
+      '.K............K.',
+      '.K............K.'
+    ]
+  },
+  GIANT_BELL: {
+    palette: {
+      '.': null,
+      'B': '#b45309',
+      'b': '#d97706',
+      'Y': '#fbbf24',
+      'D': '#78350f',
+      'S': '#451a03'
+    },
+    matrix: [
+      '.......SS.......',
+      '......SDDS......',
+      '.....SbbbbS.....',
+      '....SbbYYbbS....',
+      '....SbbYYbbS....',
+      '...SbbbYYbbbS...',
+      '...SbbbYYbbbS...',
+      '..SbbbbYYbbbbS..',
+      '..SbbbbYYbbbbS..',
+      '.SbbbbbYYbbbbbS.',
+      '.SbbbbbYYbbbbbS.',
+      'SbbbbbbYYbbbbbbS',
+      'SDDDDDDDDDDDDDDS',
+      '.SSSSSSSSSSSSSS.',
+      '.......DD.......',
+      '......SDDS......'
+    ]
   }
 };
 

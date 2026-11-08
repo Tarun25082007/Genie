@@ -121,6 +121,16 @@ export class VFXSystem {
         color = '#ffd166';
         size = 5;
         bounce = 0.7;
+      } else if (pUpper.includes('PIANO')) {
+        debrisType = Math.random() < 0.6 ? 'piano_key' : 'sheet_music';
+        color = Math.random() < 0.5 ? '#ffffff' : '#0f172a';
+        size = 6;
+        bounce = 0.6;
+      } else if (pUpper.includes('BELL')) {
+        debrisType = 'bronze_spark';
+        color = '#d97706';
+        size = 5;
+        bounce = 0.65;
       } else if (pUpper.includes('CAR') || pUpper.includes('SAFE') || pUpper.includes('ANVIL')) {
         debrisType = Math.random() < 0.6 ? 'spark' : 'shrapnel';
         color = Math.random() < 0.5 ? '#f8f9fa' : '#fbbf24';
@@ -504,6 +514,20 @@ export class VFXSystem {
         ctx.fillRect(-deb.size / 2, -deb.size / 2, deb.size, deb.size);
         ctx.fillStyle = '#70e000';
         ctx.fillRect(-deb.size / 4, -deb.size / 4, deb.size / 2, deb.size / 2);
+      } else if (deb.debrisType === 'piano_key') {
+        // Pixel ivory piano key
+        ctx.fillStyle = deb.color;
+        ctx.fillRect(-2, -deb.size / 2, 4, deb.size);
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-2, -deb.size / 2, 4, deb.size);
+      } else if (deb.debrisType === 'sheet_music') {
+        // Fluttering sheet of music
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(-deb.size / 2, -deb.size / 2, deb.size, deb.size * 1.2);
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(-deb.size / 4, -deb.size / 4, deb.size / 2, 1);
+        ctx.fillRect(-deb.size / 4, 0, deb.size / 2, 1);
       } else if (deb.debrisType === 'spark' || deb.debrisType === 'fire_spark') {
         ctx.fillStyle = deb.color;
         ctx.shadowColor = deb.color;
