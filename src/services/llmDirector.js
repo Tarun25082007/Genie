@@ -22,9 +22,13 @@ Analyze the player's wish with the ruthless precision of a demonic contract lawy
    - Ragdoll breakable joints: "neck", "leftShoulder", "rightShoulder", "leftHip", "rightHip", "all".
    - Cellular particles: "BLOOD", "FIRE", "LAVA", "ACID", "WATER", "OIL", "ICE", "SMOKE", "SAND", "GOLD", "ASH", "SPARK".
 
-3. CRITICAL: FOR EVERY TOPIC, CREATE A BRAND-NEW CUSTOM 16x16 PIXEL ART SPRITE ("custom_prop"):
-   - Draw a 16x16 pixel icon specifically depicting the player's wish (food, vehicle, animal, weapon, gadget, relic, monster).
-   - Palette keys: "." is transparent null. Letters (A, B, C, D, etc.) are hex colors like "#ff0055".
+3. CRITICAL: FOR EVERY TOPIC (INCLUDING RANDOM WISHES LIKE "GODZILLA", "UFO", "PIKACHU", "SHREK", "TRAIN", "AVOCADO"), CREATE A BRAND-NEW CUSTOM 16x16 PIXEL ART SPRITE ("custom_prop"):
+   - Draw a 16x16 pixel icon specifically depicting the exact entity the player wished for.
+   - For example:
+     * If the wish is "I wanna see Godzilla": draw GODZILLA (giant charcoal kaiju with glowing atomic cyan spines and open jaws), set scale: 6.0, mass: 950, and choreograph a seismic stomp with atomic fire breath!
+     * If the wish is "I want a UFO": draw a flying saucer with a glowing energy dome, and choreograph an alien tractor beam lifting the ragdoll into the sky!
+     * If the wish is "I want a train": draw a steam locomotive charging across the screen at 35 m/s with smoke and screen shake!
+   - Palette keys: "." is transparent null. Letters (A, B, C, D, etc.) are hex colors like "#00f5d4", "#d90429", "#ffd166".
    - Matrix: Exactly 16 strings of exactly 16 characters each.
 
 4. ATOMIC CHOREOGRAPHY VERBS:

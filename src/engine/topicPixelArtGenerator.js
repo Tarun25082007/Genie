@@ -22,16 +22,34 @@ export function synthesizeTopicScenario(cleanWish) {
 }
 
 function detectTopicCategory(text) {
+  // 1. Specific Iconic / Pop-Culture Entities
+  if (text.match(/\b(godzilla|gojira|kaiju|king kong|gamera|titan|monster zero)\b/)) {
+    return 'GODZILLA';
+  }
+  if (text.match(/\b(ufo|flying saucer|alien abduction|mothership|alien ship)\b/)) {
+    return 'UFO';
+  }
+  if (text.match(/\b(pikachu|pokemon|pokeball|charizard|thunderbolt)\b/)) {
+    return 'POKEMON';
+  }
+  if (text.match(/\b(train|locomotive|express train|bullet train|subway|steam engine)\b/)) {
+    return 'TRAIN';
+  }
+  if (text.match(/\b(nuke|nuclear|atomic bomb|warhead|icbm|thermonuclear)\b/)) {
+    return 'NUKE';
+  }
+
+  // 2. Thematic Categories
   if (text.match(/\b(pizza|burger|taco|food|eat|hungry|sandwich|cake|donut|steak|sushi|cheese|coffee|beer|wine|ice cream|chocolate|bread|meal|snack|pie|soup|apple|fruit)\b/)) {
     return 'FOOD';
   }
-  if (text.match(/\b(car|truck|bike|motorcycle|plane|airplane|jet|rocket|spaceship|ufo|train|boat|ship|submarine|skateboard|vehicle|ferrari|lambo|tesla|drive)\b/)) {
+  if (text.match(/\b(car|truck|bike|motorcycle|plane|airplane|jet|rocket|spaceship|boat|ship|submarine|skateboard|vehicle|ferrari|lambo|tesla|drive)\b/)) {
     return 'VEHICLE';
   }
   if (text.match(/\b(dog|cat|puppy|kitten|dinosaur|dino|t-rex|trex|dragon|monster|alien|zombie|skeleton|bear|shark|wolf|lion|tiger|bird|spider|snake|horse|pet|creature|animal|beast)\b/)) {
     return 'CREATURE';
   }
-  if (text.match(/\b(sword|gun|pistol|rifle|cannon|bomb|nuke|axe|knife|dagger|laser|blade|bow|arrow|spear|weapon|missile|katana|bullet|grenade)\b/)) {
+  if (text.match(/\b(sword|gun|pistol|rifle|cannon|bomb|axe|knife|dagger|laser|blade|bow|arrow|spear|weapon|missile|katana|bullet|grenade)\b/)) {
     return 'WEAPON';
   }
   if (text.match(/\b(phone|iphone|computer|pc|laptop|robot|ai|tech|console|playstation|xbox|tv|screen|drone|chip|mecha|cyber|gadget|camera)\b/)) {
@@ -60,6 +78,203 @@ function detectTopicCategory(text) {
  */
 export function generateProceduralPixelSprite(category, wishLower) {
   switch (category) {
+    case 'GODZILLA': {
+      // Radioactive King of the Monsters (Dark charcoal skin, atomic cyan glowing dorsal fins, burning yellow eye)
+      return {
+        name: 'GODZILLA_KAIJU',
+        width: 16,
+        height: 16,
+        scale: 6.0,
+        mass: 950,
+        restitution: 0.05,
+        palette: {
+          '.': null,
+          'K': '#0b090a', // Deep charcoal outline
+          'D': '#161a1d', // Heavy reptilian skin
+          'S': '#2b2d42', // Charcoal dorsal scales
+          'B': '#00f5d4', // Glowing radioactive atomic cyan spines
+          'b': '#00bbf9', // Plasma glow
+          'Y': '#ffb703', // Incandescent predatory eye
+          'W': '#ffffff', // Razor sharp teeth
+          'R': '#d90429'  // Molten atomic maw
+        },
+        matrix: [
+          '........BB......',
+          '.......bBBb.....',
+          '......bBBBBb....',
+          '....KKKBBBBKK...',
+          '...KDDDDKKKSDK..',
+          '..KDDDDDDDDDDDK.',
+          '.KDDDDDDDDYDDDK.',
+          'KDDDDDDDDDDDDK..',
+          'KDDDDDWWWWWKK...',
+          'KDDDDDWRRRRDK...',
+          'KDDDDDWWWWWDK...',
+          '.KDDDDDDDDSDK...',
+          '..KDDDDKKKSDK...',
+          '...KDDDSSSSDK...',
+          '....KDDDDDDDK...',
+          '.....KKKKKKK....'
+        ]
+      };
+    }
+
+    case 'UFO': {
+      // Flying Saucer with glowing energy dome and tractor beam emitter
+      return {
+        name: 'PROCEDURAL_ALIEN_MOTHERSHIP',
+        width: 16,
+        height: 16,
+        scale: 5.0,
+        mass: 500,
+        restitution: 0.2,
+        palette: {
+          '.': null,
+          'K': '#03045e',
+          'C': '#00b4d8',
+          'G': '#70e000',
+          'W': '#caf0f8',
+          'Y': '#ffd166',
+          'B': '#0077b6'
+        },
+        matrix: [
+          '................',
+          '......KKKK......',
+          '.....KGGGGK.....',
+          '....KGGGGGGK....',
+          '...KWWGGGGWWK...',
+          '..KKKKKKKKKKKK..',
+          '.KCCCCCCCCCCCCK.',
+          'KCCCCWCCCCWCCCCK',
+          'KCCCCCCCCCCCCCCK',
+          '.KBBBBBBBBBBBBK.',
+          '..KKYKKYKKYKKK..',
+          '....KKKKKKKK....',
+          '.....KYYYYK.....',
+          '.....KYYYYK.....',
+          '................',
+          '................'
+        ]
+      };
+    }
+
+    case 'POKEMON': {
+      // Electric rodent with lightning tail and red electric cheeks
+      return {
+        name: 'PROCEDURAL_ELECTRIC_RODENT',
+        width: 16,
+        height: 16,
+        scale: 4.5,
+        mass: 180,
+        restitution: 0.3,
+        palette: {
+          '.': null,
+          'K': '#3d0c02',
+          'Y': '#ffea00',
+          'y': '#ffd000',
+          'R': '#d90429',
+          'W': '#ffffff',
+          'B': '#7f4f24'
+        },
+        matrix: [
+          'KK...........KK.',
+          'KYYK.......KYYK.',
+          'KYYYK.....KYYYK.',
+          '.KYYYYKKKYYYYK..',
+          '..KYYYYYYYYYK...',
+          '.KYYWYYYYYWYYK..',
+          '.KYYKYYYYYKYYK..',
+          '.KYYRYYYYRYYYK..',
+          '.KYYRRKYKRRRYK..',
+          '..KYYYYYYYYYK.YY',
+          '...KYYYYYYYK.KYY',
+          '..KYYYYYYYYK.YYK',
+          '..KYYKKYYKKK.YK.',
+          '..KKK..KK...KK..',
+          '................',
+          '................'
+        ]
+      };
+    }
+
+    case 'TRAIN': {
+      // Heavy iron steam locomotive charging forward
+      return {
+        name: 'PROCEDURAL_STEAM_LOCOMOTIVE',
+        width: 16,
+        height: 16,
+        scale: 5.0,
+        mass: 850,
+        restitution: 0.1,
+        palette: {
+          '.': null,
+          'K': '#141414',
+          'I': '#2b2d42',
+          'S': '#8d99ae',
+          'F': '#f77f00',
+          'R': '#d90429',
+          'W': '#edf2f4'
+        },
+        matrix: [
+          '................',
+          '..KK............',
+          '..KI............',
+          '..KI...KKKKKK...',
+          '..KI..KIIIIIIK..',
+          '.KKIK.KIWWWWIK..',
+          'KIIIIKKIIIIIIK..',
+          'KIIIIIIIIIIIIK..',
+          'KIIIIIIIIIIIIK..',
+          'KIIIIIIIIIIIIK..',
+          'KRRRRRRRRRRRRK..',
+          'KKKSKKKSKKKSKK..',
+          '.KSSSKKSSSKKSSK.',
+          '..KSK..KSK..KSK.',
+          '................',
+          '................'
+        ]
+      };
+    }
+
+    case 'NUKE': {
+      // Tactical thermonuclear warhead
+      return {
+        name: 'PROCEDURAL_THERMONUCLEAR_BOMB',
+        width: 16,
+        height: 16,
+        scale: 5.0,
+        mass: 650,
+        restitution: 0.05,
+        palette: {
+          '.': null,
+          'K': '#283618',
+          'G': '#606c38',
+          'Y': '#dda15e',
+          'R': '#bc6c25',
+          'W': '#fefae0',
+          'D': '#d62828'
+        },
+        matrix: [
+          '......KKKK......',
+          '.....KGGGGK.....',
+          '....KGGGGGGK....',
+          '....KGGWWGGK....',
+          '...KGGWDDWGGK...',
+          '...KGGWDDWGGK...',
+          '...KGGYYYYGGK...',
+          '...KGGYYYYGGK...',
+          '...KGGGGGGGGK...',
+          '...KGGGGGGGGK...',
+          '...KGGGGGGGGK...',
+          '..KKGGGGGGGGKK..',
+          '.KRRKKKKKKKKRRK.',
+          'KRRK........KRRK',
+          'KKK..........KKK',
+          '................'
+        ]
+      };
+    }
+
     case 'FOOD': {
       // Golden crust, red sauce/pepperoni, yellow melting cheese, green herbs
       return {
@@ -379,6 +594,91 @@ export function generateProceduralPixelSprite(category, wishLower) {
  */
 function generateTopicChoreography(category, wishLower, spriteDef) {
   switch (category) {
+    case 'GODZILLA':
+      return {
+        genie_taunt: 'You wished to witness Godzilla? Savor the radioactive wrath of the King of the Monsters as his 90,000-ton foot crushes your mortal vessel!',
+        loophole_explanation: 'Clause 13.9: Failure to specify containment boundaries, spectator safe distance, or ionizing radiation shielding. Godzilla manifested directly on your coordinates.',
+        voice_pitch: 0.75,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 35, duration_ms: 1200 } },
+          { time_ms: 250, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 140, y: 350, vx: 22, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 450, verb: 'EMIT_PARTICLES', params: { type: 'FIRE', x: 300, y: 360, count: 300, spread: 60 } },
+          { time_ms: 480, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 320, y: 350, count: 200, spread: 50 } },
+          { time_ms: 520, verb: 'CAMERA_FX', params: { effect: 'RED_FLASH', intensity: 30, duration_ms: 900 } },
+          { time_ms: 540, verb: 'APPLY_FORCE', params: { target: 'torso', fx: 0.45, fy: -0.22 } },
+          { time_ms: 560, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 250 } },
+          { time_ms: 580, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 400 } },
+          { time_ms: 620, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 450, spread: 60 } },
+          { time_ms: 650, verb: 'EMIT_PARTICLES', params: { type: 'SMOKE', x: 480, y: 440, count: 250, spread: 70 } }
+        ]
+      };
+
+    case 'UFO':
+      return {
+        genie_taunt: 'An extraterrestrial encounter? The mothership has arrived to conduct an immediate vivisection and tractor-beam extraction!',
+        loophole_explanation: 'Clause 9.8: Interstellar contact invoked without bilateral diplomatic treaties. Alien abduction tractor beam reversed biological coherence.',
+        voice_pitch: 1.3,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'CRT_GLITCH', intensity: 20, duration_ms: 1000 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 110, vx: 0, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 400, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 480, y: 220, count: 200, spread: 45 } },
+          { time_ms: 450, verb: 'APPLY_FORCE', params: { target: 'all', fx: 0, fy: -0.45 } },
+          { time_ms: 700, verb: 'CAMERA_FX', params: { effect: 'RED_FLASH', intensity: 28, duration_ms: 800 } },
+          { time_ms: 720, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
+          { time_ms: 740, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 300 } },
+          { time_ms: 760, verb: 'EMIT_PARTICLES', params: { type: 'ACID', x: 480, y: 250, count: 350, spread: 50 } }
+        ]
+      };
+
+    case 'POKEMON':
+      return {
+        genie_taunt: 'A loyal pocket monster? 100,000 Volts of ungrounded lightning are coursing straight through your nervous system!',
+        loophole_explanation: 'Clause 6.2: High-voltage bio-electric discharge deployed without rubber insulation. Ragdoll fried by thunderbolt.',
+        voice_pitch: 1.4,
+        timeline: [
+          { time_ms: 100, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 380, y: 280, vx: 4, vy: 12, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 380, verb: 'CAMERA_FX', params: { effect: 'CRT_GLITCH', intensity: 25, duration_ms: 900 } },
+          { time_ms: 400, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 480, y: 440, count: 400, spread: 50 } },
+          { time_ms: 420, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 180 } },
+          { time_ms: 450, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 280 } },
+          { time_ms: 480, verb: 'EMIT_PARTICLES', params: { type: 'FIRE', x: 480, y: 440, count: 200, spread: 40 } },
+          { time_ms: 500, verb: 'EMIT_PARTICLES', params: { type: 'ASH', x: 480, y: 440, count: 180, spread: 35 } }
+        ]
+      };
+
+    case 'TRAIN':
+      return {
+        genie_taunt: 'All aboard the runaway express! The schedule makes no exceptions for biological obstacles on the tracks!',
+        loophole_explanation: 'Clause 7.4: High-speed rail corridor projected through petitioner torso without track switching signals.',
+        voice_pitch: 1.05,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 24, duration_ms: 1000 } },
+          { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: -100, y: 440, vx: 34, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 420, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 35, duration_ms: 900 } },
+          { time_ms: 440, verb: 'APPLY_FORCE', params: { target: 'torso', fx: 0.45, fy: -0.2 } },
+          { time_ms: 450, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 250 } },
+          { time_ms: 470, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 350 } },
+          { time_ms: 500, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 400, spread: 55 } },
+          { time_ms: 520, verb: 'EMIT_PARTICLES', params: { type: 'SMOKE', x: 480, y: 440, count: 250, spread: 60 } }
+        ]
+      };
+
+    case 'NUKE':
+      return {
+        genie_taunt: 'The ultimate weapon of mass destruction! Witness nuclear fission up close and personal!',
+        loophole_explanation: 'Clause 12.0: Detonation sequence initiated at ground zero. 50 megatons of thermonuclear heat vaporized petitioner.',
+        voice_pitch: 0.8,
+        timeline: [
+          { time_ms: 100, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 60, vx: 0, vy: 26, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 500, verb: 'CAMERA_FX', params: { effect: 'RED_FLASH', intensity: 38, duration_ms: 1200 } },
+          { time_ms: 520, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 35, duration_ms: 1000 } },
+          { time_ms: 540, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 400 } },
+          { time_ms: 560, verb: 'EMIT_PARTICLES', params: { type: 'LAVA', x: 480, y: 440, count: 350, spread: 60 } },
+          { time_ms: 580, verb: 'EMIT_PARTICLES', params: { type: 'FIRE', x: 480, y: 440, count: 350, spread: 60 } },
+          { time_ms: 600, verb: 'EMIT_PARTICLES', params: { type: 'ASH', x: 480, y: 440, count: 300, spread: 70 } }
+        ]
+      };
+
     case 'FOOD':
       return {
         genie_taunt: `Ah, a hunger for "${wishLower}"? Allow me to satisfy your mortal belly with a supersonic multi-ton culinary projectile!`,
