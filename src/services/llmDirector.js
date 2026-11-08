@@ -114,49 +114,92 @@ export async function interpretWishWithDirector(
 }
 
 async function queryGroq(wishText, apiKey, model, systemPrompt) {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `PLAYER WISH: "${wishText}"` }
-      ],
-      temperature: 0.8,
-      response_format: { type: 'json_object' }
-    })
-  });
+  const candidateModels = [
+    model,
+    'openai/gpt-oss-120b',
+    'qwen/qwen3.8-27b',
+    'llama-3.3-70b-versatile'
+  ].filter((m, i, arr) => m && arr.indexOf(m) === i);
 
-  if (!res.ok) throw new Error(`Groq HTTP ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '';
+  let lastError = null;
+  for (const m of candidateModels) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: m,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `PLAYER WISH: "${wishText}"` }
+          ],
+          temperature: 0.8,
+          response_format: { type: 'json_object' }
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) return content;
+      } else {
+        const errText = await res.text();
+        lastError = new Error(`Groq model ${m} failed (${res.status}): ${errText}`);
+      }
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('All Groq candidate models failed');
 }
 
 async function queryGemini(wishText, apiKey, model, systemPrompt) {
-  const targetModel = model && model.includes('gemini') ? model : 'gemini-1.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
+  const candidateModels = [
+    model,
+    'gemini-2.5-flash',
+    'gemini-3.8-flash',
+    'gemini-flash-latest',
+    'gemini-1.5-flash'
+  ].filter((m, i, arr) => m && arr.indexOf(m) === i);
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        { role: 'user', parts: [{ text: `${systemPrompt}\n\nPLAYER WISH: "${wishText}"` }] }
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.85
+  let lastError = null;
+  for (const m of candidateModels) {
+    try {
+      const targetModel = m.replace('models/', '');
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            { role: 'user', parts: [{ text: `${systemPrompt}\n\nPLAYER WISH: "${wishText}"` }] }
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.85
+          }
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text;
+      } else {
+        const errText = await res.text();
+        lastError = new Error(`Gemini model ${targetModel} failed (${res.status}): ${errText}`);
       }
-    })
-  });
+    } catch (err) {
+      lastError = err;
+    }
+  }
 
-  if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  throw lastError || new Error('All Gemini candidate models failed');
 }
 
 async function queryOllama(wishText, endpoint, model, systemPrompt) {
