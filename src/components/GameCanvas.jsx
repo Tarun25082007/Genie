@@ -596,15 +596,15 @@ export default function GameCanvas({
 
   const renderGenieEntity = (ctx, genie, th, genieCustom) => {
     ctx.save();
-    const primary = genieCustom.primaryColor || th.genieDefaults.primaryColor;
-    const secondary = genieCustom.secondaryColor || th.genieDefaults.secondaryColor;
-    const eyeColor = genieCustom.eyeColor || th.genieDefaults.eyeColor;
+    const archetype = genieCustom.archetype || th.genieDefaults?.archetype || 'DJINN_CLASSIC';
+    const primary = genieCustom.primaryColor || th.genieDefaults?.primaryColor || '#06b6d4';
+    const secondary = genieCustom.secondaryColor || th.genieDefaults?.secondaryColor || '#f59e0b';
+    const eyeColor = genieCustom.eyeColor || th.genieDefaults?.eyeColor || '#fef08a';
+    const relic = genieCustom.relic || th.genieDefaults?.relic || (
+      th.id === 'shenron_dragon' ? 'DRAGON_BALL' : th.id === 'corporate_demon' ? 'BLOOD_CONTRACT' : 'MAGIC_LAMP'
+    );
 
     // Relic on ground below Genie
-    let relic = 'MAGIC_LAMP';
-    if (th.id === 'shenron_dragon') relic = 'DRAGON_BALL';
-    else if (th.id === 'corporate_demon') relic = 'BLOOD_CONTRACT';
-
     drawPixelSprite(ctx, relic, genie.x - 24, 456, 48);
 
     // Smoke Tail Particles
@@ -621,12 +621,12 @@ export default function GameCanvas({
     // Swirling Smoky Tail Curve
     ctx.save();
     ctx.strokeStyle = primary;
-    ctx.lineWidth = 12;
+    ctx.lineWidth = archetype.includes('DRAGON') ? 16 : 12;
     ctx.lineCap = 'round';
-    ctx.globalAlpha = 0.5;
+    ctx.globalAlpha = 0.55;
     ctx.beginPath();
     ctx.moveTo(genie.x, 470);
-    ctx.bezierCurveTo(genie.x - 40, 380, genie.x - 30, genie.y + 70, genie.x, genie.y + 30);
+    ctx.bezierCurveTo(genie.x - 45, 380, genie.x - 30, genie.y + 70, genie.x, genie.y + 30);
     ctx.stroke();
     ctx.restore();
 
@@ -635,39 +635,185 @@ export default function GameCanvas({
     ctx.translate(genie.x, genie.y);
 
     // Aura Glow
-    const aura = ctx.createRadialGradient(0, 0, 8, 0, 0, 65);
+    const auraRadius = archetype === 'DRAGON_SUPER' ? 85 : 65;
+    const aura = ctx.createRadialGradient(0, 0, 8, 0, 0, auraRadius);
     aura.addColorStop(0, primary + '88');
     aura.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = aura;
     ctx.beginPath();
-    ctx.arc(0, 0, 65, 0, Math.PI * 2);
+    ctx.arc(0, 0, auraRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Torso
+    // Special: Super Shenron Golden Celestial Wings
+    if (archetype === 'DRAGON_SUPER') {
+      ctx.fillStyle = primary + 'cc';
+      ctx.strokeStyle = secondary;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-15, 0);
+      ctx.bezierCurveTo(-60, -40, -85, -10, -50, 20);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(15, 0);
+      ctx.bezierCurveTo(60, -40, 85, -10, 50, 20);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Torso: Porunga is much broader and more muscular
     ctx.fillStyle = primary;
     ctx.beginPath();
-    ctx.ellipse(0, 10, 26, 20, 0, 0, Math.PI * 2);
+    if (archetype === 'DRAGON_PORUNGA') {
+      ctx.ellipse(0, 10, 36, 24, 0, 0, Math.PI * 2);
+    } else {
+      ctx.ellipse(0, 10, 26, 20, 0, 0, Math.PI * 2);
+    }
     ctx.fill();
 
-    // Crossed Arms
-    ctx.strokeStyle = secondary;
-    ctx.lineWidth = 8;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(0, 16, 20, 0.2, Math.PI - 0.2);
-    ctx.stroke();
+    // Torso Muscle / Accent lines
+    if (archetype === 'DRAGON_PORUNGA') {
+      ctx.strokeStyle = secondary;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(-14, 8, 10, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(14, 8, 10, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+      // Shoulder spikes
+      ctx.fillStyle = '#1e293b';
+      [[-36, 4], [36, 4]].forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx * 1.25, sy - 14);
+        ctx.lineTo(sx * 0.8, sy - 8);
+        ctx.closePath();
+        ctx.fill();
+      });
+    } else {
+      // Crossed Arms
+      ctx.strokeStyle = secondary;
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(0, 16, 20, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+    }
 
     // Head
-    ctx.beginPath();
-    ctx.arc(0, -26, 15, 0, Math.PI * 2);
     ctx.fillStyle = primary;
+    ctx.beginPath();
+    ctx.arc(0, -26, archetype === 'DRAGON_PORUNGA' ? 18 : 15, 0, Math.PI * 2);
     ctx.fill();
+
+    // Archetype Horns & Head Adornments
+    if (archetype === 'DRAGON_PORUNGA') {
+      // Massive horizontal curved black Namekian horns
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-12, -30);
+      ctx.bezierCurveTo(-38, -32, -50, -48, -42, -58);
+      ctx.bezierCurveTo(-32, -45, -20, -38, -8, -34);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(12, -30);
+      ctx.bezierCurveTo(38, -32, 50, -48, 42, -58);
+      ctx.bezierCurveTo(32, -45, 20, -38, 8, -34);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Dorsal Head Fin
+      ctx.fillStyle = secondary;
+      ctx.beginPath();
+      ctx.moveTo(-4, -42);
+      ctx.lineTo(0, -52);
+      ctx.lineTo(4, -42);
+      ctx.closePath();
+      ctx.fill();
+    } else if (archetype === 'DRAGON_SHENRON' || archetype === 'DRAGON_SHADOW' || archetype === 'DRAGON') {
+      // Antler deer horns
+      ctx.strokeStyle = secondary;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-8, -38);
+      ctx.lineTo(-20, -56);
+      ctx.moveTo(-15, -48);
+      ctx.lineTo(-8, -54);
+      ctx.moveTo(8, -38);
+      ctx.lineTo(20, -56);
+      ctx.moveTo(15, -48);
+      ctx.lineTo(8, -54);
+      ctx.stroke();
+
+      // Dragon Whiskers
+      ctx.strokeStyle = primary;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-8, -20);
+      ctx.bezierCurveTo(-22, -14, -30, -4, -34, 12);
+      ctx.moveTo(8, -20);
+      ctx.bezierCurveTo(22, -14, 30, -4, 34, 12);
+      ctx.stroke();
+    } else if (archetype === 'DJINN_IFRIT') {
+      // Blazing Magma Horns
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(-10, -36);
+      ctx.lineTo(-20, -55);
+      ctx.lineTo(-6, -42);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(10, -36);
+      ctx.lineTo(20, -55);
+      ctx.lineTo(6, -42);
+      ctx.closePath();
+      ctx.fill();
+    } else if (archetype === 'DEMON_BAPHOMET') {
+      // Curved Ram Horns
+      ctx.strokeStyle = secondary;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(-16, -26, 12, Math.PI * 0.8, Math.PI * 1.8);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(16, -26, 12, -Math.PI * 0.8, -Math.PI * 1.8, true);
+      ctx.stroke();
+    } else if (archetype.includes('DEMON')) {
+      // Classic Devil Horns
+      ctx.fillStyle = secondary;
+      ctx.beginPath();
+      ctx.moveTo(-10, -36);
+      ctx.lineTo(-18, -50);
+      ctx.lineTo(-4, -40);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(10, -36);
+      ctx.lineTo(18, -50);
+      ctx.lineTo(4, -40);
+      ctx.closePath();
+      ctx.fill();
+    } else if (archetype === 'DJINN_CLASSIC' || archetype === 'DJINN') {
+      // Turban Crest Jewel
+      ctx.fillStyle = secondary;
+      ctx.beginPath();
+      ctx.arc(0, -40, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // Glowing Eyes
     ctx.fillStyle = eyeColor;
     ctx.beginPath();
-    ctx.arc(-5, -26, 3, 0, Math.PI * 2);
-    ctx.arc(5, -26, 3, 0, Math.PI * 2);
+    ctx.arc(-5, -26, archetype === 'DRAGON_PORUNGA' ? 4 : 3, 0, Math.PI * 2);
+    ctx.arc(5, -26, archetype === 'DRAGON_PORUNGA' ? 4 : 3, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();

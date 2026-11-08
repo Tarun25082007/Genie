@@ -6,7 +6,7 @@ import DialogueBox from './components/DialogueBox';
 import WishInputBar from './components/WishInputBar';
 import ThemeCustomizerModal from './components/ThemeCustomizerModal';
 import SettingsModal from './components/SettingsModal';
-import { THEME_SETS, DEFAULT_CUSTOMIZATION } from './data/themes';
+import { THEME_SETS, DEFAULT_CUSTOMIZATION, getAvailableThemes } from './data/themes';
 import { audioSynth } from './engine/audioSynth';
 import { choreographyRunner } from './engine/choreographyRunner';
 import { interpretWishWithDirector } from './services/llmDirector';
@@ -74,19 +74,21 @@ export default function App() {
     }
   }));
 
-  const theme = THEME_SETS[currentThemeId] || THEME_SETS.djinn_classic;
+  const [themes, setThemes] = useState(() => getAvailableThemes());
+  const theme = themes[currentThemeId] || themes.djinn_classic || THEME_SETS.djinn_classic;
+  const maxWishes = customization?.genie?.maxWishes || theme.maxWishes || 3;
 
-  // Initial intro dialogue on realm entry
+  // Initial intro dialogue on realm entry or variant switch
   useEffect(() => {
     setCurrentDialogue({
-      speaker: theme.name.split(':')[1]?.trim() || theme.name,
-      text: theme.introDialogue,
+      speaker: customization?.genie?.name || theme.name.split(':')[1]?.trim() || theme.name,
+      text: customization?.genie?.introDialogue || theme.introDialogue,
       loopholeScore: 100,
       loopholeExplanation: 'State your wish carefully... or your vessel will be harvested.',
       voicePitch: 1.0,
       survived: true
     });
-  }, [currentThemeId]);
+  }, [currentThemeId, customization?.genie?.variant]);
 
   // Audio start on first interaction
   useEffect(() => {
@@ -129,7 +131,13 @@ export default function App() {
         wishText,
         settings.provider,
         settings.credentials,
-        theme,
+        {
+          ...theme,
+          name: customization?.genie?.name || theme.name,
+          role: customization?.genie?.role || theme.role,
+          personaPrompt: theme.personaPrompt,
+          maxWishes: maxWishes
+        },
         wishNumber
       );
 
@@ -154,7 +162,7 @@ export default function App() {
       setSurvivedWishesCount(newSurvivedCount);
 
       // Check if all wishes completed with survival (VICTORY!)
-      if (wishNumber >= theme.maxWishes) {
+      if (wishNumber >= maxWishes) {
         confetti({
           particleCount: 160,
           spread: 80,
@@ -162,8 +170,8 @@ export default function App() {
         });
         setTimeout(() => {
           setCurrentDialogue({
-            speaker: theme.name.split(':')[1]?.trim() || theme.name,
-            text: theme.victoryDialogue,
+            speaker: customization?.genie?.name || theme.name.split(':')[1]?.trim() || theme.name,
+            text: customization?.genie?.victoryDialogue || theme.victoryDialogue,
             loopholeScore: 100,
             loopholeExplanation: 'CONGRATULATIONS: You have beaten the Monkey’s Paw with 100% legal precision!',
             voicePitch: 1.3,
@@ -192,6 +200,8 @@ export default function App() {
   };
 
   const handleSelectTheme = (themeId) => {
+    const freshThemes = getAvailableThemes();
+    setThemes(freshThemes);
     setCurrentThemeId(themeId);
     localStorage.setItem('genie_theme_id', themeId);
     setWishNumber(1);
@@ -293,7 +303,9 @@ export default function App() {
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-slate-800 text-slate-300 hover:text-white transition-colors text-xs font-bold"
           >
             <Palette className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">SET {currentThemeId.split('_')[0].toUpperCase()}</span>
+            <span className="hidden sm:inline">
+              {customization?.genie?.name ? customization.genie.name.split(' ')[0].toUpperCase() : currentThemeId.split('_')[0].toUpperCase()}
+            </span>
           </button>
 
           {/* Settings Modal Toggle */}
@@ -347,7 +359,7 @@ export default function App() {
           isExecuting={isExecuting}
           theme={theme}
           wishNumber={wishNumber}
-          maxWishes={theme.maxWishes}
+          maxWishes={maxWishes}
         />
 
         {/* ======================================================== */}
@@ -462,7 +474,10 @@ export default function App() {
           currentThemeId={currentThemeId}
           onSelectTheme={handleSelectTheme}
           customization={customization}
-          onUpdateCustomization={setCustomization}
+          onUpdateCustomization={(newCust) => {
+            setCustomization(newCust);
+            setThemes(getAvailableThemes());
+          }}
           onClose={() => setIsThemeModalOpen(false)}
         />
       )}

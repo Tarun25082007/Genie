@@ -1,38 +1,12 @@
-// 3 Theme Sets (Djinn, Shenron, Corporate Demon) + Customizer Data & 16x16 Pixel Matrices
+// Multi-Theme & Entity Variant System + Extensible Custom Theme Engine + 16x16 Pixel Sprites
 
 export const THEME_SETS = {
-  djinn_classic: {
-    id: 'djinn_classic',
-    name: 'Set 1: Al-Qadim the Literal Djinn',
-    subtitle: 'Ancient Brass Lamp Chamber • 3 Wishes',
-    maxWishes: 3,
-    role: 'Ancient Mesopotamian Smoke Djinn bound to brass & blood',
-    introDialogue: 'MORTAL! You have rubbed the Brass Lamp of Al-Qadim. Three wishes are yours. Speak plainly—for the cosmos interprets every syllable to the letter, and flesh is terribly fragile.',
-    victoryDialogue: 'IMPOSSIBLE! Three wishes granted without spilling a single drop of your mortal blood?! Keep your wretched soul—the Lamp is yours!',
-    personaPrompt: 'Speak like an ancient, booming theatrical Arabian Nights Djinn mixed with a pedantic physics professor. Mock mortal greed and sloppy phrasing.',
-    chamberColors: {
-      bgTop: '#140c1c',
-      bgBottom: '#2d162c',
-      brickPrimary: '#4a2545',
-      brickSecondary: '#30182d',
-      brickMortar: '#120814',
-      torchFlame: '#f59e0b',
-      accentHex: '#f59e0b'
-    },
-    genieDefaults: {
-      archetype: 'DJINN',
-      primaryColor: '#06b6d4',
-      secondaryColor: '#f59e0b',
-      eyeColor: '#fef08a',
-      auraParticleType: 'SPARK',
-      voiceBaseFreq: 135
-    }
-  },
   shenron_dragon: {
     id: 'shenron_dragon',
-    name: 'Set 2: Shenlong the Eternal Dragon',
-    subtitle: 'Sacred Kami Lookout Shrine • 2 Wishes',
+    name: 'Set 1: Dragon Ball Wish Dragons',
+    subtitle: 'Sacred Kami Lookout & Planet Namek • 2-3 Wishes',
     maxWishes: 2,
+    defaultVariant: 'shenron',
     role: 'Colossal Emerald Star Dragon of the Seven Orbs',
     introDialogue: 'YOU WHO HAVE GATHERED THE SEVEN STAR ORBS... Speak your two wishes now! But beware: eternal dragon magic obeys raw cosmic conservation of mass and momentum!',
     victoryDialogue: 'YOUR WISDOM RIVALS THE SUPREME KAIS. Both wishes have been fulfilled without shattering your mortal vessel. Farewell, until the Orbs scatter once more!',
@@ -47,19 +21,186 @@ export const THEME_SETS = {
       accentHex: '#10b981'
     },
     genieDefaults: {
-      archetype: 'DRAGON',
+      archetype: 'DRAGON_SHENRON',
+      variant: 'shenron',
       primaryColor: '#10b981',
       secondaryColor: '#facc15',
       eyeColor: '#ef4444',
+      relic: 'DRAGON_BALL',
       auraParticleType: 'FIRE',
       voiceBaseFreq: 95
-    }
+    },
+    entityVariants: [
+      {
+        id: 'shenron',
+        name: 'Shenron (Earth Eternal Dragon)',
+        subtitle: 'Earth Dragon • 2 Wishes',
+        archetype: 'DRAGON_SHENRON',
+        maxWishes: 2,
+        role: 'Colossal Emerald Star Dragon of Earth',
+        introDialogue: 'YOU WHO HAVE GATHERED THE SEVEN STAR ORBS... Speak your two wishes now!',
+        victoryDialogue: 'YOUR WISHES ARE GRANTED. FAREWELL!',
+        primaryColor: '#10b981',
+        secondaryColor: '#facc15',
+        eyeColor: '#ef4444',
+        relic: 'DRAGON_BALL',
+        auraParticleType: 'FIRE',
+        voiceBaseFreq: 95
+      },
+      {
+        id: 'porunga',
+        name: 'Porunga (Namekian Dragon of Dreams)',
+        subtitle: 'Planet Namek • 3 Wishes',
+        archetype: 'DRAGON_PORUNGA',
+        maxWishes: 3,
+        role: 'Colossal Muscular Horned Dream Dragon of Planet Namek',
+        introDialogue: 'TAKKA KARUPUTO POPORUNGA PUPIRITTO PARO! I am Porunga, the Great Dragon of Namek! Three wishes are yours!',
+        victoryDialogue: 'YOUR THREE WISHES ARE FULFILLED! The Namekian Dragon Balls shall now turn to stone!',
+        primaryColor: '#059669',
+        secondaryColor: '#1e293b',
+        eyeColor: '#fde047',
+        relic: 'NAMEK_DRAGON_BALL',
+        auraParticleType: 'GOLD',
+        voiceBaseFreq: 80
+      },
+      {
+        id: 'super_shenron',
+        name: 'Super Shenron (Golden Cosmic Dragon)',
+        subtitle: 'Multiverse • 3 Wishes',
+        archetype: 'DRAGON_SUPER',
+        maxWishes: 3,
+        role: 'Universal Golden Dragon of Cosmic Galaxies',
+        introDialogue: 'BEHOLD THE GOLDEN DRAGON WHOSE WINGS SPAN UNIVERSES. Speak your divine wish without hesitation!',
+        victoryDialogue: 'THE COSMIC HARMONY IS PRESERVED. YOUR WISHES ARE WOVEN INTO CREATION!',
+        primaryColor: '#fbbf24',
+        secondaryColor: '#d97706',
+        eyeColor: '#dc2626',
+        relic: 'SUPER_DRAGON_BALL',
+        auraParticleType: 'SPARK',
+        voiceBaseFreq: 70
+      },
+      {
+        id: 'black_smoke_shenron',
+        name: 'Black Smoke Shenron (Shadow Dragon)',
+        subtitle: 'Negative Realm • 2 Wishes',
+        archetype: 'DRAGON_SHADOW',
+        maxWishes: 2,
+        role: 'Corrupted Dragon of Malice & Negative Energy',
+        introDialogue: 'HAHAHA! The negative energy of mortal greed has summoned me! Suffer the curse of the Shadow Dragon!',
+        victoryDialogue: 'CHEATED OUT OF A CORPSE?! The negative energy disperses... for now!',
+        primaryColor: '#262626',
+        secondaryColor: '#7f1d1d',
+        eyeColor: '#9333ea',
+        relic: 'CRACKED_DRAGON_BALL',
+        auraParticleType: 'ASH',
+        voiceBaseFreq: 110
+      }
+    ]
   },
+
+  djinn_classic: {
+    id: 'djinn_classic',
+    name: 'Set 2: Al-Qadim & Ancient Djinn',
+    subtitle: 'Ancient Brass Lamp Chamber • 3 Wishes',
+    maxWishes: 3,
+    defaultVariant: 'al_qadim',
+    role: 'Ancient Mesopotamian Smoke Djinn bound to brass & blood',
+    introDialogue: 'MORTAL! You have rubbed the Brass Lamp of Al-Qadim. Three wishes are yours. Speak plainly—for the cosmos interprets every syllable to the letter, and flesh is terribly fragile.',
+    victoryDialogue: 'IMPOSSIBLE! Three wishes granted without spilling a single drop of your mortal blood?! Keep your wretched soul—the Lamp is yours!',
+    personaPrompt: 'Speak like an ancient, booming theatrical Arabian Nights Djinn mixed with a pedantic physics professor. Mock mortal greed and sloppy phrasing.',
+    chamberColors: {
+      bgTop: '#140c1c',
+      bgBottom: '#2d162c',
+      brickPrimary: '#4a2545',
+      brickSecondary: '#30182d',
+      brickMortar: '#120814',
+      torchFlame: '#f59e0b',
+      accentHex: '#f59e0b'
+    },
+    genieDefaults: {
+      archetype: 'DJINN_CLASSIC',
+      variant: 'al_qadim',
+      primaryColor: '#06b6d4',
+      secondaryColor: '#f59e0b',
+      eyeColor: '#fef08a',
+      relic: 'MAGIC_LAMP',
+      auraParticleType: 'SPARK',
+      voiceBaseFreq: 135
+    },
+    entityVariants: [
+      {
+        id: 'al_qadim',
+        name: 'Al-Qadim (Classic Smoke Djinn)',
+        subtitle: 'Mesopotamian Brass Lamp • 3 Wishes',
+        archetype: 'DJINN_CLASSIC',
+        maxWishes: 3,
+        role: 'Ancient Mesopotamian Smoke Djinn bound to brass & blood',
+        introDialogue: 'MORTAL! You have rubbed the Brass Lamp of Al-Qadim. Three wishes are yours. Speak plainly!',
+        victoryDialogue: 'IMPOSSIBLE! Three wishes granted without spilling a drop of blood?! The Lamp is yours!',
+        primaryColor: '#06b6d4',
+        secondaryColor: '#f59e0b',
+        eyeColor: '#fef08a',
+        relic: 'MAGIC_LAMP',
+        auraParticleType: 'SPARK',
+        voiceBaseFreq: 135
+      },
+      {
+        id: 'ifrit',
+        name: 'Ifrit (Molten Flame Djinn)',
+        subtitle: 'Smokeless Fire Vault • 3 Wishes',
+        archetype: 'DJINN_IFRIT',
+        maxWishes: 3,
+        role: 'Lord of the Smokeless Flame & Molten Cinders',
+        introDialogue: 'FROM THE SMOKELESS FIRE OF CREATION, IFRIT RISES! Three wishes, tiny insect of dust—speak before I incinerate you!',
+        victoryDialogue: 'YOU QUENCHED MY FLAME WITH MERE WORDS?! A magnificent mind inside fragile flesh.',
+        primaryColor: '#f97316',
+        secondaryColor: '#dc2626',
+        eyeColor: '#fef08a',
+        relic: 'FLAME_URN',
+        auraParticleType: 'FIRE',
+        voiceBaseFreq: 115
+      },
+      {
+        id: 'marid',
+        name: 'Marid (Abyssal Ocean Djinn)',
+        subtitle: 'Sunken Pearl Cavern • 3 Wishes',
+        archetype: 'DJINN_MARID',
+        maxWishes: 3,
+        role: 'Sovereign of the Abyssal Ocean & Primordial Depths',
+        introDialogue: 'THE ABYSSAL DEEPS AWAKEN! I am Marid, ancient ruler of the tidal surges. Three wishes upon the ocean floor!',
+        victoryDialogue: 'THE TIDES RETREAT IN AWE. You walk upon water without sinking!',
+        primaryColor: '#0284c7',
+        secondaryColor: '#38bdf8',
+        eyeColor: '#a7f3d0',
+        relic: 'ABYSSAL_PEARL',
+        auraParticleType: 'SPARK',
+        voiceBaseFreq: 145
+      },
+      {
+        id: 'jann',
+        name: 'Jann (Desert Mirage Djinn)',
+        subtitle: 'Endless Dunes • 3 Wishes',
+        archetype: 'DJINN_JANN',
+        maxWishes: 3,
+        role: 'Spirit of the Blinding Simoom & Desert Mirage',
+        introDialogue: 'I WALK THE ENDLESS SHIFTING DUNES. Three wishes amidst the suffocating desert sands!',
+        victoryDialogue: 'A MIRAGE NO LONGER—YOUR WILL STANDS LIKE AN OASIS OF STONE.',
+        primaryColor: '#d97706',
+        secondaryColor: '#fde68a',
+        eyeColor: '#ffffff',
+        relic: 'DESERT_AMULET',
+        auraParticleType: 'GOLD',
+        voiceBaseFreq: 125
+      }
+    ]
+  },
+
   corporate_demon: {
     id: 'corporate_demon',
-    name: 'Set 3: Malphas Esq., Senior Partner',
+    name: 'Set 3: Malphas & Infernal Partners',
     subtitle: '9th Circle Boardroom & Tort Law Dungeon • 3 Wishes',
     maxWishes: 3,
+    defaultVariant: 'malphas',
     role: 'Infernal Senior Litigation Partner at Brimstone, Malphas & Void LLP',
     introDialogue: 'Welcome to Brimstone & Void LLP! Per Section 4.2 of your Soul Retainer Agreement, you are entitled to three (3) wishes. Any undefined terms will be construed strictly against the Drafter—namely, your ribcage.',
     victoryDialogue: 'MY GOD... Ironclad indemnification across three consecutive clauses?! Our Litigation Department has zero actionable loopholes. You are free to go, Counselor.',
@@ -74,13 +215,81 @@ export const THEME_SETS = {
       accentHex: '#ef4444'
     },
     genieDefaults: {
-      archetype: 'DEMON',
+      archetype: 'DEMON_CORPORATE',
+      variant: 'malphas',
       primaryColor: '#dc2626',
       secondaryColor: '#1f2937',
       eyeColor: '#fde047',
+      relic: 'BLOOD_CONTRACT',
       auraParticleType: 'ASH',
       voiceBaseFreq: 175
-    }
+    },
+    entityVariants: [
+      {
+        id: 'malphas',
+        name: 'Malphas Esq. (Litigation Partner)',
+        subtitle: 'Brimstone & Void LLP • 3 Wishes',
+        archetype: 'DEMON_CORPORATE',
+        maxWishes: 3,
+        role: 'Infernal Senior Litigation Partner at Brimstone, Malphas & Void LLP',
+        introDialogue: 'Welcome to Brimstone & Void LLP! Per Section 4.2 of your Soul Retainer Agreement, you are entitled to three (3) wishes.',
+        victoryDialogue: 'Ironclad indemnification across three consecutive clauses?! Zero actionable loopholes. You are free to go, Counselor.',
+        primaryColor: '#dc2626',
+        secondaryColor: '#1f2937',
+        eyeColor: '#fde047',
+        relic: 'BLOOD_CONTRACT',
+        auraParticleType: 'ASH',
+        voiceBaseFreq: 175
+      },
+      {
+        id: 'mammon',
+        name: 'Mammon (Archduke of Greed)',
+        subtitle: 'Vaults of Avarice • 3 Wishes',
+        archetype: 'DEMON_MAMMON',
+        maxWishes: 3,
+        role: 'Archduke of the 4th Circle, Chief Investment Officer of Hell',
+        introDialogue: 'GOLD! COMPOUND INTEREST! LUXURY AT THE COST OF YOUR VERTEBRAE! Three wishes from the Vaults of Avarice!',
+        victoryDialogue: 'NOT A SINGLE PENNY STOLEN, NOT A SINGLE SINEW CRUSHED?! You are more greedy than I!',
+        primaryColor: '#eab308',
+        secondaryColor: '#713f12',
+        eyeColor: '#22c55e',
+        relic: 'GOLDEN_PENTACLE',
+        auraParticleType: 'GOLD',
+        voiceBaseFreq: 160
+      },
+      {
+        id: 'baphomet',
+        name: 'Baphomet (The Sabbatic Goat)',
+        subtitle: 'Hermetic Altar • 3 Wishes',
+        archetype: 'DEMON_BAPHOMET',
+        maxWishes: 3,
+        role: 'Ancient Sabbatic Goat of the Hermetic Pact',
+        introDialogue: 'SOLVE ET COAGULA. The Sabbatic Goat hears your plea. Three covenants binding spirit to bone!',
+        victoryDialogue: 'THE EQUILIBRIUM HOLDS. Your mind transcends mortal corruption.',
+        primaryColor: '#18181b',
+        secondaryColor: '#991b1b',
+        eyeColor: '#ef4444',
+        relic: 'DEMON_TALISMAN',
+        auraParticleType: 'BLOOD',
+        voiceBaseFreq: 90
+      },
+      {
+        id: 'leviathan',
+        name: 'Leviathan (Grand Admiral of Envy)',
+        subtitle: 'Abyssal Chasm of Spite • 3 Wishes',
+        archetype: 'DEMON_LEVIATHAN',
+        maxWishes: 3,
+        role: 'Grand Admiral of the Sea of Bitterness',
+        introDialogue: 'JEALOUSY IS A BOTTOMLESS MAW. Three wishes to surpass your peers, before you drown in your own envy!',
+        victoryDialogue: 'YOU HARBOR NO SPITE? A vessel devoid of envy cannot be swallowed by the deep.',
+        primaryColor: '#4c1d95',
+        secondaryColor: '#059669',
+        eyeColor: '#a855f7',
+        relic: 'FORBIDDEN_TOME',
+        auraParticleType: 'ACID',
+        voiceBaseFreq: 130
+      }
+    ]
   }
 };
 
@@ -93,11 +302,14 @@ export const DEFAULT_CUSTOMIZATION = {
     hatStyle: 'NONE' // 'NONE' | 'CROWN' | 'WIZARD' | 'HARDHAT'
   },
   genie: {
-    primaryColor: '#06b6d4',
-    secondaryColor: '#f59e0b',
-    eyeColor: '#fef08a',
-    auraParticleType: 'SPARK',
-    voiceBaseFreq: 135
+    archetype: 'DRAGON_SHENRON',
+    variant: 'shenron',
+    primaryColor: '#10b981',
+    secondaryColor: '#facc15',
+    eyeColor: '#ef4444',
+    relic: 'DRAGON_BALL',
+    auraParticleType: 'FIRE',
+    voiceBaseFreq: 95
   }
 };
 
@@ -105,7 +317,7 @@ export const COLOR_PALETTES = {
   skinTones: ['#f5cba7', '#e0a96d', '#c68b45', '#8d5524', '#f8d7da', '#d4c7b0'],
   clothing: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#1e293b', '#f4f1de', '#18181b'],
   hats: ['NONE', 'CROWN', 'WIZARD', 'HARDHAT'],
-  genieAuras: ['#06b6d4', '#10b981', '#dc2626', '#8b5cf6', '#f59e0b', '#ec4899']
+  genieAuras: ['#06b6d4', '#10b981', '#dc2626', '#8b5cf6', '#f59e0b', '#ec4899', '#eab308', '#059669', '#18181b']
 };
 
 export const PIXEL_SPRITES = {
@@ -165,6 +377,262 @@ export const PIXEL_SPRITES = {
       '..oYYYYYYYYYYo..',
       '...ooYYYYYYoo...',
       '.....oooooo.....'
+    ]
+  },
+  NAMEK_DRAGON_BALL: {
+    palette: {
+      '.': null,
+      'G': '#059669',
+      'g': '#047857',
+      'Y': '#facc15',
+      'y': '#eab308',
+      'R': '#dc2626',
+      'W': '#ffffff'
+    },
+    matrix: [
+      '....GGGGGGGG....',
+      '..GGYYYYYYYYGG..',
+      '.GYYWWYYYYYYYYG.',
+      '.GYYWWYYRRRYYYg.',
+      'GYYYYYYRRRRRYYYg',
+      'GYYYYYRRRRRRRYYg',
+      'GYYYYYRRRRRRRYYg',
+      'GYYYYYYRRRRRYYYg',
+      'GYYYYYYRRRRRYYYg',
+      'GYYYYYYYRRRYYYYg',
+      'GYYYYYYYYYYYYYYg',
+      '.GYYYYYYYYYYYYg.',
+      '.gYYYYYYYYYYYYg.',
+      '..ggYYYYYYYYgg..',
+      '....gggggggg....',
+      '................'
+    ]
+  },
+  SUPER_DRAGON_BALL: {
+    palette: {
+      '.': null,
+      'G': '#f59e0b',
+      'g': '#b45309',
+      'Y': '#fef08a',
+      'W': '#ffffff',
+      'R': '#ef4444',
+      'B': '#3b82f6'
+    },
+    matrix: [
+      '.....GGGGGG.....',
+      '...GGYYYYYYGG...',
+      '..GYYWWYYYYYYG..',
+      '.GYYWWYYRRRYYYG.',
+      '.GYYYYYRRRRRYYYg',
+      'GYYYYYRRBRRRRYYg',
+      'GYYYYYRRRRRRRYYg',
+      'GYYYYYRRRRRRRYYg',
+      'GYYYYYYRRRRRYYYg',
+      'GYYYYYYYRRRYYYYg',
+      '.GYYYYYYYYYYYYg.',
+      '..gYYYYYYYYYYg..',
+      '...ggYYYYYYgg...',
+      '.....gggggg.....',
+      '................',
+      '................'
+    ]
+  },
+  CRACKED_DRAGON_BALL: {
+    palette: {
+      '.': null,
+      'D': '#1c1917',
+      'd': '#0c0a09',
+      'P': '#7e22ce',
+      'p': '#581c87',
+      'R': '#991b1b',
+      'r': '#ef4444'
+    },
+    matrix: [
+      '.....DDDDDD.....',
+      '...DDPPPPPPDD...',
+      '..DPPPrPPPPPPd..',
+      '.DPPPrrPPPPPPPd.',
+      '.DPPrrPPPPPPPPd.',
+      'DPPrrPPrPPPPPPPd',
+      'DPPrPPPrrPPPPPPd',
+      'DPPPPPPPPrrPPPPd',
+      'DPPPPPPPPPrrPPPd',
+      'DPPPPPPPPrrPPPPd',
+      'DPPPPPPPPrPPPPPd',
+      '.DPPPPPPPPPPPPd.',
+      '..dDPPPPPPPPdd..',
+      '...ddDPPPPdd....',
+      '.....dddddd.....',
+      '................'
+    ]
+  },
+  FLAME_URN: {
+    palette: {
+      '.': null,
+      'F': '#ffedd5',
+      'Y': '#fde047',
+      'O': '#f97316',
+      'R': '#dc2626',
+      'D': '#18181b',
+      'd': '#27272a'
+    },
+    matrix: [
+      '.......FY.......',
+      '......FOYR......',
+      '.....FOYYOR.....',
+      '......FOOR......',
+      '.....ddDDdd.....',
+      '....dDDDDDDd....',
+      '...dDDDDDDDDd...',
+      '..dDDDDDDDDDDd..',
+      '..dDDDDDDDDDDd..',
+      '..dDDDDDDDDDDd..',
+      '..dDDDDDDDDDDd..',
+      '...dDDDDDDDDd...',
+      '....dDDDDDDd....',
+      '.....ddDDdd.....',
+      '....dDDDDDDd....',
+      '....dddddddd....'
+    ]
+  },
+  ABYSSAL_PEARL: {
+    palette: {
+      '.': null,
+      'C': '#0f766e',
+      'c': '#115e59',
+      'P': '#f0fdfa',
+      'p': '#99f6e4',
+      'S': '#5eead4',
+      'D': '#134e4a'
+    },
+    matrix: [
+      '................',
+      '.....cccccc.....',
+      '...ccCCCCCCcc...',
+      '..cCCCCCCCCCCc..',
+      '.cCCC..PP..CCCc.',
+      'cCCC.PPPPPP.CCCc',
+      'cCC.PPPPPPPP.CCc',
+      'cCC.PPPSPPPP.CCc',
+      'cCC.PPPPPPPP.CCc',
+      'cCCC.PPPPPP.CCCc',
+      '.cCCC..PP..CCCc.',
+      '..cCCCCCCCCCCc..',
+      '...ccCCCCCCcc...',
+      '.....cccccc.....',
+      '....DDDDDDDD....',
+      '................'
+    ]
+  },
+  DESERT_AMULET: {
+    palette: {
+      '.': null,
+      'G': '#f59e0b',
+      'g': '#b45309',
+      'T': '#06b6d4',
+      't': '#0891b2',
+      'Y': '#fde68a'
+    },
+    matrix: [
+      '.......GG.......',
+      '.....GGYYGG.....',
+      '....GYYYYYYG....',
+      '...GYYTTTTYYG...',
+      '..GYYTTTTTTYYG..',
+      '..GYYTTttTTYYG..',
+      '.GYYTTTttTTTYYG.',
+      '.GYYTTttttTTYYG.',
+      '.GYYTTttttTTYYG.',
+      '.GYYTTTttTTTYYG.',
+      '..GYYTTttTTYYG..',
+      '..GYYTTTTTTYYG..',
+      '...GYYTTTTYYG...',
+      '....GYYYYYYG....',
+      '.....GGYYGG.....',
+      '.......GG.......'
+    ]
+  },
+  GOLDEN_PENTACLE: {
+    palette: {
+      '.': null,
+      'Y': '#fef08a',
+      'G': '#eab308',
+      'g': '#a16207',
+      'R': '#dc2626'
+    },
+    matrix: [
+      '.....gggggg.....',
+      '...ggGGGGGGgg...',
+      '..gGGGGGGGGGGg..',
+      '.gGGGGGYGGGGGGg.',
+      '.gGGGGYYYGGGGGG.',
+      'gGGGGYYYYYGGGGgg',
+      'gGGGGYYYYYGGGGgg',
+      'gGGGGYYgYYGGGGgg',
+      'gGGGGYYgYYGGGGgg',
+      'gGGGGYYgYYGGGGgg',
+      'gGGGGYYYYYGGGGgg',
+      '.gGGGGYYYGGGGGG.',
+      '.gGGGGGYGGGGGGg.',
+      '..gGGGGGGGGGGg..',
+      '...ggGGGGGGgg...',
+      '.....gggggg.....'
+    ]
+  },
+  DEMON_TALISMAN: {
+    palette: {
+      '.': null,
+      'D': '#18181b',
+      'd': '#27272a',
+      'R': '#ef4444',
+      'r': '#991b1b',
+      'W': '#ffffff'
+    },
+    matrix: [
+      '.....dddddd.....',
+      '...ddDDDDDDdd...',
+      '..dDDDDDDDDDDd..',
+      '.dDDDDDrrDDDDDd.',
+      '.dDDDDrRRrDDDDd.',
+      'dDDDDDrRRrDDDDDd',
+      'dDDDrrRRRRrrDDDd',
+      'dDDDrRWWWW RrDDDd',
+      'dDDDrRWWWW RrDDDd',
+      'dDDDrrRRRRrrDDDd',
+      'dDDDDDrRRrDDDDDd',
+      '.dDDDDrRRrDDDDd.',
+      '.dDDDDDrrDDDDDd.',
+      '..dDDDDDDDDDDd..',
+      '...ddDDDDDDdd...',
+      '.....dddddd.....'
+    ]
+  },
+  FORBIDDEN_TOME: {
+    palette: {
+      '.': null,
+      'P': '#4c1d95',
+      'p': '#2e1065',
+      'G': '#f59e0b',
+      'V': '#c084fc',
+      'W': '#f5f3ff'
+    },
+    matrix: [
+      '..PPPPPPPPPPPP..',
+      '.PPPPPPPPPPPPPP.',
+      '.PPGGGGGGGGGGPP.',
+      '.PGWWWWWWWWWWGP.',
+      '.PGWVVWVVWVVWGP.',
+      '.PGWWWWWWWWWWGP.',
+      '.PGWVVVVVVVVWGP.',
+      '.PGWWWWWWWWWWGP.',
+      '.PGWVVVVVVVVWGP.',
+      '.PGWWWWWWWWWWGP.',
+      '.PGWVVWVVWVVWGP.',
+      '.PGWWWWWWWWWWGP.',
+      '.PPGGGGGGGGGGPP.',
+      '.PPPPPPPPPPPPPP.',
+      '..pppppppppppp..',
+      '................'
     ]
   },
   BLOOD_CONTRACT: {
@@ -280,7 +748,7 @@ export const PIXEL_SPRITES = {
 };
 
 export function drawPixelSprite(ctx, spriteKey, x, y, size = 32, flipX = false) {
-  const sprite = PIXEL_SPRITES[spriteKey];
+  const sprite = PIXEL_SPRITES[spriteKey] || PIXEL_SPRITES.MAGIC_LAMP;
   if (!sprite) return;
 
   const { matrix, palette } = sprite;
@@ -307,5 +775,66 @@ export function drawPixelSprite(ctx, spriteKey, x, y, size = 32, flipX = false) 
   ctx.restore();
 }
 
-// Alias for backwards compatibility
+/**
+ * Returns all built-in themes merged with user-defined custom themes from localStorage
+ */
+export function getAvailableThemes() {
+  let custom = {};
+  try {
+    const stored = localStorage.getItem('genie_custom_themes');
+    if (stored) {
+      custom = JSON.parse(stored);
+    }
+  } catch (err) {
+    console.warn('Failed to load custom themes from localStorage:', err);
+  }
+
+  return {
+    ...THEME_SETS,
+    ...custom
+  };
+}
+
+/**
+ * Saves a new custom theme to localStorage
+ */
+export function saveCustomTheme(themeObj) {
+  try {
+    const current = getAvailableThemes();
+    const storedCustoms = {};
+    Object.keys(current).forEach((k) => {
+      if (!THEME_SETS[k]) {
+        storedCustoms[k] = current[k];
+      }
+    });
+
+    storedCustoms[themeObj.id] = themeObj;
+    localStorage.setItem('genie_custom_themes', JSON.stringify(storedCustoms));
+    return true;
+  } catch (err) {
+    console.error('Failed to save custom theme:', err);
+    return false;
+  }
+}
+
+/**
+ * Deletes a custom theme from localStorage
+ */
+export function deleteCustomTheme(themeId) {
+  if (THEME_SETS[themeId]) return false; // Prevent deleting core themes
+  try {
+    const stored = localStorage.getItem('genie_custom_themes');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      delete parsed[themeId];
+      localStorage.setItem('genie_custom_themes', JSON.stringify(parsed));
+      return true;
+    }
+  } catch (err) {
+    console.error('Failed to delete custom theme:', err);
+  }
+  return false;
+}
+
+// Aliases for backwards compatibility
 export const THEMES = THEME_SETS;
