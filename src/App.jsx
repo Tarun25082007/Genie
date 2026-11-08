@@ -27,6 +27,11 @@ import {
   Zap,
   Square,
   CheckCircle2,
+  Waves,
+  Snowflake,
+  Wind,
+  Mountain,
+  Fuel,
   X
 } from 'lucide-react';
 
@@ -213,6 +218,12 @@ export default function App() {
     { id: 'blood', label: 'Blood', icon: Droplets, color: '#be0a19' },
     { id: 'fire', label: 'Fire', icon: Flame, color: '#ff3c14' },
     { id: 'acid', label: 'Acid', icon: Skull, color: '#70e000' },
+    { id: 'water', label: 'Water', icon: Waves, color: '#38bdf8' },
+    { id: 'lava', label: 'Lava', icon: Flame, color: '#f97316' },
+    { id: 'oil', label: 'Oil', icon: Fuel, color: '#64748b' },
+    { id: 'ice', label: 'Ice', icon: Snowflake, color: '#a5f3fc' },
+    { id: 'smoke', label: 'Smoke', icon: Wind, color: '#94a3b8' },
+    { id: 'sand', label: 'Sand', icon: Mountain, color: '#fde047' },
     { id: 'ash', label: 'Ash', icon: Layers, color: '#a0a5aa' },
     { id: 'gold', label: 'Gold', icon: Sparkles, color: '#ffd166' },
     { id: 'spark', label: 'Spark', icon: Zap, color: '#fff064' },

@@ -35,8 +35,52 @@ export class PlayerRagdoll {
       rightLeg: 0
     };
     this.isDead = false;
+    this.state = 'CALM'; // 'CALM' | 'PANIC' | 'SQUASHED' | 'BURNING' | 'FROZEN' | 'STRETCHED'
 
     this.initRagdoll(startX, startY);
+  }
+
+  setRagdollState(newState, synth = audioSynth) {
+    this.state = newState;
+    if (newState === 'SQUASHED') {
+      synth.playSplat();
+    } else if (newState === 'FROZEN') {
+      synth.playFreeze();
+      Object.keys(this.parts).forEach((k) => {
+        this.partTints[k] = '#a5f3fc';
+      });
+    } else if (newState === 'BURNING') {
+      synth.playLaser();
+      Object.keys(this.parts).forEach((k) => {
+        this.partTints[k] = '#f97316';
+      });
+    } else if (newState === 'STRETCHED') {
+      synth.playBoing();
+      Object.values(this.constraints).forEach((c) => {
+        if (c) c.length = 18;
+      });
+    }
+  }
+
+  squash(caEngine = null, synth = audioSynth) {
+    this.setRagdollState('SQUASHED', synth);
+    if (caEngine && this.parts.torso) {
+      const gx = Math.floor(this.parts.torso.position.x / 3);
+      const gy = Math.floor(this.parts.torso.position.y / 3);
+      caEngine.spawnCircle(gx, gy, 6, CELL_TYPES.BLOOD, 4);
+    }
+  }
+
+  freeze(synth = audioSynth) {
+    this.setRagdollState('FROZEN', synth);
+  }
+
+  burn(synth = audioSynth) {
+    this.setRagdollState('BURNING', synth);
+  }
+
+  stretch(synth = audioSynth) {
+    this.setRagdollState('STRETCHED', synth);
   }
 
   initRagdoll(x, y) {
@@ -492,15 +536,29 @@ export class PlayerRagdoll {
       ctx.translate(body.position.x, body.position.y);
       ctx.rotate(body.angle);
 
+      if (this.state === 'SQUASHED') {
+        ctx.scale(2.2, 0.22);
+      }
+
       const bodyKey = Object.keys(this.parts).find((k) => this.parts[k] === body);
       ctx.fillStyle = this.partTints[bodyKey] || defaultColor;
       ctx.fillRect(-w / 2, -h / 2, w, h);
 
-      if (border) {
+      if (this.state === 'FROZEN') {
+        ctx.strokeStyle = '#e0f2fe';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-w / 2, -h / 2, w, h);
+      } else if (border) {
         ctx.strokeStyle = border;
         ctx.lineWidth = 1.5;
         ctx.strokeRect(-w / 2, -h / 2, w, h);
       }
+
+      if (this.state === 'BURNING') {
+        ctx.fillStyle = Math.random() > 0.5 ? '#ff4500' : '#ffd700';
+        ctx.fillRect(-w / 2 + Math.random() * w, -h / 2 - 6, 4, 6);
+      }
+
       ctx.restore();
     };
 
@@ -533,7 +591,11 @@ export class PlayerRagdoll {
       ctx.translate(p.head.position.x, p.head.position.y);
       ctx.rotate(p.head.angle);
 
-      const headTint = this.partTints.head || c.skin;
+      if (this.state === 'SQUASHED') {
+        ctx.scale(2.2, 0.22);
+      }
+
+      const headTint = this.partTints.head || (this.state === 'FROZEN' ? '#a5f3fc' : c.skin);
       ctx.fillStyle = headTint;
       ctx.fillRect(-12, -12, 24, 24);
 
@@ -543,10 +605,10 @@ export class PlayerRagdoll {
 
       // Eyes & Expression
       const speed = Math.hypot(p.head.velocity.x, p.head.velocity.y);
-      const isPanicking = speed > 4 || this.constraints.neck?.isBroken;
+      const isPanicking = speed > 4 || this.constraints.neck?.isBroken || this.state === 'PANIC' || this.state === 'BURNING';
 
-      if (this.isDead || this.constraints.neck?.isBroken) {
-        // Dead X eyes
+      if (this.isDead || this.constraints.neck?.isBroken || this.state === 'SQUASHED') {
+        // Dead or Squashed X eyes
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
         [[-6, -2], [6, -2]].forEach(([ex, ey]) => {

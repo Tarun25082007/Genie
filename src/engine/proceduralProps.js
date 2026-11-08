@@ -182,6 +182,103 @@ export function createPropFromVerb(params, customPropDef) {
         label: 'prop_gold_bar'
       });
       body.customData = { propType: 'gold_bar', width: w, height: h, spriteKey: 'GOLD_BAR' };
+    } else if (propType === 'BALLOON' || propType === 'HELIUM_BALLOONS') {
+      const scale = params.scale || 3.5;
+      const r = 8 * scale;
+      body = Bodies.circle(x, y, r, {
+        mass: params.mass || 2,
+        restitution: 0.6,
+        frictionAir: 0.05,
+        label: 'prop_balloon'
+      });
+      body.customData = { propType: 'balloon', radius: r, spriteKey: 'BALLOON', scale, buoyant: true };
+    } else if (propType === 'EXAM_SHEET' || propType === 'EXAM_BLIZZARD') {
+      const scale = params.scale || 3;
+      const w = 16 * scale;
+      const h = 18 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 1.5,
+        frictionAir: 0.12,
+        restitution: 0.2,
+        label: 'prop_exam_sheet'
+      });
+      body.customData = { propType: 'exam_sheet', width: w, height: h, spriteKey: 'EXAM_SHEET', scale, flutter: true };
+    } else if (propType === 'DEER' || propType === 'STAMPEDE_DEER') {
+      const scale = params.scale || 3.5;
+      const w = 18 * scale;
+      const h = 16 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 180,
+        restitution: 0.2,
+        friction: 0.4,
+        label: 'prop_deer'
+      });
+      body.customData = { propType: 'deer', width: w, height: h, spriteKey: 'HORNED_DEER', scale, charge: true };
+    } else if (propType === 'GIANT_SANDWICH' || propType === 'DAGWOOD_SUB') {
+      const scale = params.scale || 4.5;
+      const w = 18 * scale;
+      const h = 16 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 400,
+        restitution: 0.05,
+        friction: 0.9,
+        label: 'prop_sandwich'
+      });
+      body.customData = { propType: 'sandwich', width: w, height: h, spriteKey: 'GIANT_SANDWICH', scale };
+    } else if (propType === 'SPORTS_CAR') {
+      const scale = params.scale || 4;
+      const w = 24 * scale;
+      const h = 12 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 450,
+        restitution: 0.2,
+        friction: 0.7,
+        label: 'prop_car'
+      });
+      body.customData = { propType: 'car', width: w, height: h, spriteKey: 'SPORTS_CAR', scale };
+    } else if (propType === 'TUNGSTEN_SARCOPHAGUS') {
+      const scale = params.scale || 4.5;
+      const w = 18 * scale;
+      const h = 24 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 850,
+        restitution: 0.05,
+        friction: 0.9,
+        label: 'prop_sarcophagus'
+      });
+      body.customData = { propType: 'sarcophagus', width: w, height: h, spriteKey: 'TUNGSTEN_SARCOPHAGUS', scale };
+    } else if (propType === 'SAFE') {
+      const scale = params.scale || 4.5;
+      const w = 18 * scale;
+      const h = 18 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 950,
+        restitution: 0.05,
+        friction: 0.95,
+        label: 'prop_safe'
+      });
+      body.customData = { propType: 'safe', width: w, height: h, spriteKey: 'SAFE', scale };
+    } else if (propType === 'STATUE_FRIEND') {
+      const scale = params.scale || 4.5;
+      const w = 18 * scale;
+      const h = 26 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 650,
+        restitution: 0.08,
+        friction: 0.85,
+        label: 'prop_statue'
+      });
+      body.customData = { propType: 'statue', width: w, height: h, spriteKey: 'STATUE_FRIEND', scale };
+    } else if (propType === 'METEOR') {
+      const scale = params.scale || 4;
+      const r = 10 * scale;
+      body = Bodies.circle(x, y, r, {
+        mass: params.mass || 320,
+        restitution: 0.2,
+        friction: 0.6,
+        label: 'prop_meteor'
+      });
+      body.customData = { propType: 'meteor', radius: r, spriteKey: 'METEOR', scale };
     } else {
       // Fallback
       body = Bodies.rectangle(x, y, 40, 40, {
@@ -235,9 +332,28 @@ export function renderPropBody(ctx, body) {
       ctx.drawImage(offscreen, -offscreen.width / 2, -offscreen.height / 2);
     }
   } else if (custom.spriteKey) {
-    const offscreen = getOffscreenPixelSprite(custom.spriteKey, 3);
+    const scale = custom.scale || 3;
+    const offscreen = getOffscreenPixelSprite(custom.spriteKey, scale);
     if (offscreen) {
+      if (propType === 'meteor') {
+        const glow = ctx.createRadialGradient(0, 0, 5, 0, 0, 45);
+        glow.addColorStop(0, 'rgba(255, 100, 20, 0.8)');
+        glow.addColorStop(1, 'rgba(255, 50, 0, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, 45, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.drawImage(offscreen, -offscreen.width / 2, -offscreen.height / 2);
+      if (propType === 'balloon') {
+        // Draw dangling wavy string
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, offscreen.height / 2 - 4);
+        ctx.quadraticCurveTo(8, offscreen.height / 2 + 16, -4, offscreen.height / 2 + 36);
+        ctx.stroke();
+      }
     }
   } else if (propType === 'anvil') {
     const w = custom.width || 72;

@@ -401,6 +401,121 @@ export class AudioSynth {
     });
   }
 
+  // Stampede hoofbeats for charging deer herd
+  playStampede() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    for (let i = 0; i < 4; i++) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const t = now + i * 0.08;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140 - i * 15, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.06);
+
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 0.08);
+    }
+  }
+
+  // Crystalline absolute zero flash freeze / glass shatter
+  playFreeze() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    [1200, 1600, 2400, 3200].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.03);
+      gain.gain.setValueAtTime(0.12, now + idx * 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now + idx * 0.03);
+      osc.stop(now + 0.65);
+    });
+  }
+
+  // Paper flutter noise for blizzard of exam papers
+  playPaperFlutter() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const noise = this.createNoiseBuffer(0.2);
+    if (!noise) return;
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = noise;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1800, now);
+    filter.Q.setValueAtTime(3, now);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+    source.start(now);
+    source.stop(now + 0.2);
+  }
+
+  // Heavy titanium safe impact
+  playSafeImpact() {
+    this.playThud(2.0);
+    this.playBoneCrunch();
+  }
+
+  // Cartoon squashed splat sound
+  playSplat() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.15);
+
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.18);
+  }
+
+  // Boing rubber noodle stretch sound
+  playBoing() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.linearRampToValueAtTime(500, now + 0.15);
+    osc.frequency.linearRampToValueAtTime(220, now + 0.3);
+
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.36);
+  }
+
   playButton() {
     this.playVoiceBlip(600, 0);
   }
@@ -415,8 +530,16 @@ export class AudioSynth {
 
     const scales = {
       djinn: [146.83, 155.56, 185.0, 196.0, 220.0, 233.08, 277.18, 293.66],
+      arabian: [146.83, 155.56, 185.0, 196.0, 220.0, 233.08, 277.18, 293.66],
+      arabian_nights: [146.83, 155.56, 185.0, 196.0, 220.0, 233.08, 277.18, 293.66],
+      cyberpunk: [110.0, 130.81, 146.83, 164.81, 196.0, 220.0],
+      cyberpunk_2099: [110.0, 130.81, 146.83, 164.81, 196.0, 220.0],
+      cosmic: [65.41, 69.3, 77.78, 87.31, 98.0],
+      cosmic_void: [65.41, 69.3, 77.78, 87.31, 98.0],
       shenron: [164.81, 196.0, 220.0, 246.94, 293.66, 329.63, 392.0, 440.0],
-      demon: [123.47, 130.81, 146.83, 164.81, 174.61, 196.0, 220.0, 246.94]
+      shenron_dragon: [164.81, 196.0, 220.0, 246.94, 293.66, 329.63, 392.0, 440.0],
+      demon: [123.47, 130.81, 146.83, 164.81, 174.61, 196.0, 220.0, 246.94],
+      corporate_demon: [123.47, 130.81, 146.83, 164.81, 174.61, 196.0, 220.0, 246.94]
     };
 
     let step = 0;

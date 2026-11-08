@@ -432,24 +432,67 @@ export function analyzeHeuristicWish(rawText) {
 
   // Lethal fallback
   let propType = 'ANVIL';
-  if (lower.match(/\b(rich|money|gold|cash|dollar|wealth)\b/)) propType = 'GOLD_BAR';
-  else if (lower.match(/\b(exam|test|study|grade)\b/)) propType = 'TETRIS_T';
-  else if (lower.match(/\b(car|speed|fast)\b/)) propType = 'SPIKE_BALL';
+  let particleType = 'BLOOD';
+  let taunt = `"${clean}"? A delightfully vague wish! Let us see what happens when the cosmos resolves that ambiguity with maximum kinetic force!`;
+  let explanation = 'Contractual ambiguity regarding spatial velocity, delivery vector, and physical acceleration.';
+
+  if (lower.match(/\b(deer|buck|bucks|antler|stag|animal)\b/)) {
+    propType = 'STAMPEDE_DEER';
+    taunt = 'A million bucks? What a coincidence, a migrating herd of wild male deer was looking for a right-of-way through your skull!';
+    explanation = 'Semantic homonym exploit: "Bucks" construed literally as mature male cervids delivered en masse.';
+  } else if (lower.match(/\b(sandwich|food|burger|sub|eat|lunch|snack)\b/)) {
+    propType = 'DAGWOOD_SUB';
+    taunt = 'A sandwich? Granted! Here comes a 2-ton colossal Dagwood submarine sandwich to turn you into sandwich meat!';
+    explanation = 'Volumetric and mass bounds unspecified. Colossal BLT dropped from sub-orbit directly overhead.';
+  } else if (lower.match(/\b(fly|flight|balloon|float|air|sky|levitate)\b/)) {
+    propType = 'BALLOON';
+    particleType = 'SPARK';
+    taunt = 'You wish to fly? Granted! Bunches of high-buoyancy helium balloons tied to your wrists for a one-way trip to the stratosphere!';
+    explanation = 'Failure to specify altitude ceiling or breathing apparatus. Player launched into the upper mesosphere.';
+  } else if (lower.match(/\b(car|sports car|ferrari|lambo|vehicle|drive|speed)\b/)) {
+    propType = 'SPORTS_CAR';
+    taunt = 'A luxury sports car? Dropping a cherry-red V12 supercar directly from the sky at 200 miles per hour!';
+    explanation = 'Delivery acceleration vector violated: Vehicle delivered vertically downwards at terminal velocity.';
+  } else if (lower.match(/\b(friend|girlfriend|love|hug|marry|companion)\b/)) {
+    propType = 'STATUE_FRIEND';
+    taunt = 'A companion who will never let you go? Here is a 40-ton colossal iron statue for a suffocating hug of eternal doom!';
+    explanation = 'Biological parameters omitted. Delivered an immovable 40-ton iron effigy with unyielding embrace.';
+  } else if (lower.match(/\b(quiet|silence|freeze|cold|winter|chill|ice)\b/)) {
+    propType = 'SAFE';
+    particleType = 'ICE';
+    taunt = 'Peace and absolute quiet? Commencing absolute zero flash freeze of your mortal vessel!';
+    explanation = 'Thermal boundary neglected. Complete atmospheric temperature plunge to 0 Kelvin.';
+  } else if (lower.match(/\b(hot|heat|warm|summer|sun|flame|fire)\b/)) {
+    propType = 'METEOR';
+    particleType = 'FIRE';
+    taunt = 'You wish to be hot? Savor the 5,000 Kelvin radiant embrace of a direct celestial meteor strike!';
+    explanation = 'Thermodynamic bounds unspecified: Ambient chamber temperature raised to solar core levels.';
+  } else if (lower.match(/\b(exam|test|study|grade|school|pass)\b/)) {
+    propType = 'EXAM_BLIZZARD';
+    particleType = 'ACID';
+    taunt = 'Passing your exams? Here is a blizzard of razor-sharp "F-" graded papers soaked in corrosive red ink!';
+    explanation = 'Physical manifestation of academic records delivered at hurricane gale velocities.';
+  } else if (lower.match(/\b(rich|money|gold|cash|dollar|wealth|crypto|bitcoin)\b/)) {
+    propType = 'SAFE';
+    particleType = 'GOLD';
+    taunt = 'You requested financial abundance? Commencing delivery of two metric tons of solid uncirculated bullion overhead!';
+    explanation = 'Clause 4.1: Ambiguity in delivery vector & velocity of legal tender.';
+  }
 
   return {
     wishText: clean,
     survived: false,
     loophole_score: 15,
-    genie_taunt: `"${clean}"? A delightfully vague wish! Let us see what happens when the cosmos resolves that ambiguity with maximum kinetic force!`,
-    loophole_explanation: 'Contractual ambiguity regarding spatial velocity, delivery vector, and physical acceleration.',
+    genie_taunt: taunt,
+    loophole_explanation: explanation,
     voice_pitch: 1.0,
     custom_prop: null,
     choreography_timeline: [
-      { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: propType, x: 480, y: 80, vx: 0, vy: 24, mass: 250, scale: 4 } },
+      { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: propType, x: 480, y: 80, vx: propType === 'STAMPEDE_DEER' ? -18 : 0, vy: propType === 'BALLOON' ? -10 : 22, mass: 280, scale: 4 } },
       { time_ms: 600, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 24, duration_ms: 800 } },
       { time_ms: 620, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 150 } },
       { time_ms: 650, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 200 } },
-      { time_ms: 700, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 350, spread: 40 } }
+      { time_ms: 700, verb: 'EMIT_PARTICLES', params: { type: particleType, x: 480, y: 440, count: 350, spread: 40 } }
     ]
   };
 }

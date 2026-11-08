@@ -369,8 +369,26 @@ export default function GameCanvas({
         }
       }
 
-      // 2. Physics Step
+      // 2. Physics Step & Aerodynamic/Buoyant custom forces
       if (engine) {
+        propsRef.current.forEach((b) => {
+          if (b.customData?.buoyant) {
+            Body.applyForce(b, b.position, {
+              x: Math.sin(currentTime * 0.003) * 0.0015,
+              y: -0.012 * (b.mass || 1)
+            });
+          } else if (b.customData?.flutter) {
+            Body.applyForce(b, b.position, {
+              x: Math.sin(currentTime * 0.008 + b.position.y * 0.05) * 0.002,
+              y: -0.003 * (b.mass || 1)
+            });
+          } else if (b.customData?.charge) {
+            Body.applyForce(b, b.position, {
+              x: -0.012 * (b.mass || 1),
+              y: 0
+            });
+          }
+        });
         Engine.update(engine, dt * 1000);
       }
 
@@ -407,7 +425,13 @@ export default function GameCanvas({
           ash: CELL_TYPES.ASH,
           gold: CELL_TYPES.GOLD,
           wall: CELL_TYPES.WALL,
-          spark: CELL_TYPES.SPARK
+          spark: CELL_TYPES.SPARK,
+          water: CELL_TYPES.WATER,
+          lava: CELL_TYPES.LAVA,
+          oil: CELL_TYPES.OIL,
+          ice: CELL_TYPES.ICE,
+          smoke: CELL_TYPES.SMOKE,
+          sand: CELL_TYPES.SAND
         };
         const cType = toolTypeMap[activeTool];
         if (cType !== undefined) {

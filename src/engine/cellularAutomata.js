@@ -7,7 +7,13 @@ export const CELL_TYPES = {
   ACID: 4,
   ASH: 5,
   GOLD: 6,
-  SPARK: 7
+  SPARK: 7,
+  WATER: 8,
+  LAVA: 9,
+  OIL: 10,
+  ICE: 11,
+  SMOKE: 12,
+  SAND: 13
 };
 
 export const CELL_COLORS = {
@@ -19,7 +25,13 @@ export const CELL_COLORS = {
   [CELL_TYPES.ACID]: [0xFF00E070, 0xFF05ED78, 0xFF00D165, 0xFF10F580], // Toxic radiant emerald
   [CELL_TYPES.ASH]: [0xFFA8B0B8, 0xFF9CA4AC, 0xFFB2BAC2, 0xFF9098A0], // Granular light grey
   [CELL_TYPES.GOLD]: [0xFF66D1FF, 0xFF55C0EE, 0xFF77E0FF, 0xFF44B0DD], // Gleaming gold
-  [CELL_TYPES.SPARK]: [0xFF64F0FF, 0xFF80F5FF, 0xFF40EBFF, 0xFFFFFFFF] // Hot yellow-white sparks
+  [CELL_TYPES.SPARK]: [0xFF64F0FF, 0xFF80F5FF, 0xFF40EBFF, 0xFFFFFFFF], // Hot yellow-white sparks
+  [CELL_TYPES.WATER]: [0xFFF09020, 0xFFE08018, 0xFFFF9F30, 0xFFD07010], // Deep translucent oceanic blue
+  [CELL_TYPES.LAVA]: [0xFF0055FF, 0xFF0038EE, 0xFF1066FF, 0xFF0022DD], // Molten incandescent magma
+  [CELL_TYPES.OIL]: [0xFF202028, 0xFF2A2830, 0xFF181820, 0xFF35303A], // Black combustible crude oil
+  [CELL_TYPES.ICE]: [0xFFFFF0C0, 0xFFF8E5B0, 0xFFFFF8D0, 0xFFF0DAB0], // Frosty crystalline cyan/white
+  [CELL_TYPES.SMOKE]: [0x80808080, 0x90707070, 0x70909090, 0x60808080], // Translucent rising grey smoke
+  [CELL_TYPES.SAND]: [0xFF6AC4E9, 0xFF58B5DB, 0xFF7CD0F5, 0xFF4FA0C5]  // Warm golden desert sand
 };
 
 export class CellularAutomataEngine {
@@ -251,6 +263,24 @@ export class CellularAutomataEngine {
           case CELL_TYPES.SPARK:
             this.updateSpark(x, y, idx);
             break;
+          case CELL_TYPES.WATER:
+            this.updateWater(x, y, idx);
+            break;
+          case CELL_TYPES.LAVA:
+            this.updateLava(x, y, idx);
+            break;
+          case CELL_TYPES.OIL:
+            this.updateOil(x, y, idx);
+            break;
+          case CELL_TYPES.ICE:
+            this.updateIce(x, y, idx);
+            break;
+          case CELL_TYPES.SMOKE:
+            this.updateSmoke(x, y, idx);
+            break;
+          case CELL_TYPES.SAND:
+            this.updateSand(x, y, idx);
+            break;
         }
       }
     }
@@ -473,6 +503,219 @@ export class CellularAutomataEngine {
 
     if (target >= 0 && target < this.totalCells && this.cells[target] === CELL_TYPES.EMPTY && this.solidMask[target] === 0) {
       this.swap(idx, target);
+    }
+  }
+
+  updateWater(x, y, idx) {
+    // 1. Extinguish fire & cool lava into solid rock
+    const neighbors = [idx + 320, idx - 1, idx + 1, idx - 320];
+    for (let i = 0; i < neighbors.length; i++) {
+      const nIdx = neighbors[i];
+      if (nIdx < 0 || nIdx >= this.totalCells) continue;
+      if (this.cells[nIdx] === CELL_TYPES.FIRE) {
+        this.cells[nIdx] = CELL_TYPES.SMOKE;
+        this.life[nIdx] = 20;
+        this.cells[idx] = CELL_TYPES.EMPTY;
+        return;
+      } else if (this.cells[nIdx] === CELL_TYPES.LAVA) {
+        this.cells[nIdx] = CELL_TYPES.WALL; // Lava solidifies into rock!
+        this.cells[idx] = CELL_TYPES.SMOKE; // Water turns into steam
+        this.life[idx] = 30;
+        return;
+      }
+    }
+
+    // 2. Fall directly down (water sinks below oil, empty, smoke)
+    const below = idx + 320;
+    if (below < this.totalCells && this.solidMask[below] === 0) {
+      const bCell = this.cells[below];
+      if (bCell === CELL_TYPES.EMPTY || bCell === CELL_TYPES.SMOKE || bCell === CELL_TYPES.OIL) {
+        this.swap(idx, below);
+        return;
+      }
+    }
+
+    // 3. Diagonal fall
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    const d1 = below + dir;
+    const d2 = below - dir;
+
+    if (d1 < this.totalCells && this.solidMask[d1] === 0 && (this.cells[d1] === CELL_TYPES.EMPTY || this.cells[d1] === CELL_TYPES.SMOKE)) {
+      this.swap(idx, d1);
+      return;
+    }
+    if (d2 < this.totalCells && this.solidMask[d2] === 0 && (this.cells[d2] === CELL_TYPES.EMPTY || this.cells[d2] === CELL_TYPES.SMOKE)) {
+      this.swap(idx, d2);
+      return;
+    }
+
+    // 4. Fast lateral surface flow (high fluid leveling)
+    const s1 = idx + dir;
+    const s2 = idx - dir;
+    const sFar = idx + dir * 2;
+
+    if (s1 >= 0 && s1 < this.totalCells && this.solidMask[s1] === 0 && (this.cells[s1] === CELL_TYPES.EMPTY || this.cells[s1] === CELL_TYPES.SMOKE)) {
+      this.swap(idx, s1);
+    } else if (s2 >= 0 && s2 < this.totalCells && this.solidMask[s2] === 0 && (this.cells[s2] === CELL_TYPES.EMPTY || this.cells[s2] === CELL_TYPES.SMOKE)) {
+      this.swap(idx, s2);
+    } else if (sFar >= 0 && sFar < this.totalCells && this.solidMask[sFar] === 0 && Math.random() < 0.7 && (this.cells[sFar] === CELL_TYPES.EMPTY || this.cells[sFar] === CELL_TYPES.SMOKE)) {
+      this.swap(idx, sFar);
+    }
+  }
+
+  updateLava(x, y, idx) {
+    // 1. Melt ice, ignite oil and flammables
+    const neighbors = [idx + 320, idx - 1, idx + 1, idx - 320];
+    for (let i = 0; i < neighbors.length; i++) {
+      const nIdx = neighbors[i];
+      if (nIdx < 0 || nIdx >= this.totalCells) continue;
+      if (this.cells[nIdx] === CELL_TYPES.ICE) {
+        this.cells[nIdx] = CELL_TYPES.WATER;
+      } else if (this.cells[nIdx] === CELL_TYPES.OIL) {
+        this.cells[nIdx] = CELL_TYPES.FIRE;
+        this.life[nIdx] = 60;
+      }
+    }
+
+    // 2. Slow viscous downward fall
+    if (Math.random() < 0.25) return; // Viscous flow rate
+
+    const below = idx + 320;
+    if (below < this.totalCells && this.solidMask[below] === 0 && (this.cells[below] === CELL_TYPES.EMPTY || this.cells[below] === CELL_TYPES.SMOKE)) {
+      this.swap(idx, below);
+      return;
+    }
+
+    // 3. Diagonal flow
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    const d1 = below + dir;
+    if (d1 < this.totalCells && this.solidMask[d1] === 0 && (this.cells[d1] === CELL_TYPES.EMPTY || this.cells[d1] === CELL_TYPES.SMOKE)) {
+      this.swap(idx, d1);
+      return;
+    }
+
+    // 4. Slow lateral spread
+    if (Math.random() < 0.3) {
+      const s1 = idx + dir;
+      if (s1 >= 0 && s1 < this.totalCells && this.solidMask[s1] === 0 && (this.cells[s1] === CELL_TYPES.EMPTY || this.cells[s1] === CELL_TYPES.SMOKE)) {
+        this.swap(idx, s1);
+      }
+    }
+  }
+
+  updateOil(x, y, idx) {
+    // 1. Explosive combustibility: check if adjacent to fire, lava, or spark
+    const neighbors = [idx + 320, idx - 1, idx + 1, idx - 320];
+    for (let i = 0; i < neighbors.length; i++) {
+      const nIdx = neighbors[i];
+      if (nIdx < 0 || nIdx >= this.totalCells) continue;
+      const c = this.cells[nIdx];
+      if (c === CELL_TYPES.FIRE || c === CELL_TYPES.LAVA || c === CELL_TYPES.SPARK) {
+        this.cells[idx] = CELL_TYPES.FIRE;
+        this.life[idx] = 80; // High persistent burning life
+        return;
+      }
+    }
+
+    // 2. Falls through empty space or smoke
+    const below = idx + 320;
+    if (below < this.totalCells && this.solidMask[below] === 0) {
+      const bCell = this.cells[below];
+      if (bCell === CELL_TYPES.EMPTY || bCell === CELL_TYPES.SMOKE) {
+        this.swap(idx, below);
+        return;
+      }
+    }
+
+    // 3. Oil floats on water! Lateral spread along water surface or floor
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    const s1 = idx + dir;
+    const s2 = idx - dir;
+    if (s1 >= 0 && s1 < this.totalCells && this.solidMask[s1] === 0 && (this.cells[s1] === CELL_TYPES.EMPTY || this.cells[s1] === CELL_TYPES.SMOKE)) {
+      this.swap(idx, s1);
+    } else if (s2 >= 0 && s2 < this.totalCells && this.solidMask[s2] === 0 && (this.cells[s2] === CELL_TYPES.EMPTY || this.cells[s2] === CELL_TYPES.SMOKE)) {
+      this.swap(idx, s2);
+    }
+  }
+
+  updateIce(x, y, idx) {
+    // 1. Melts near heat (fire, lava, spark)
+    const neighbors = [idx + 320, idx - 1, idx + 1, idx - 320];
+    for (let i = 0; i < neighbors.length; i++) {
+      const nIdx = neighbors[i];
+      if (nIdx < 0 || nIdx >= this.totalCells) continue;
+      const c = this.cells[nIdx];
+      if (c === CELL_TYPES.FIRE || c === CELL_TYPES.LAVA || c === CELL_TYPES.SPARK) {
+        if (Math.random() < 0.2) {
+          this.cells[idx] = CELL_TYPES.WATER;
+          return;
+        }
+      }
+    }
+  }
+
+  updateSmoke(x, y, idx) {
+    // 1. Life check (dispersion over time)
+    if (this.life[idx] <= 1) {
+      if (Math.random() < 0.15) {
+        this.cells[idx] = CELL_TYPES.EMPTY;
+        this.life[idx] = 0;
+        return;
+      }
+    } else {
+      this.life[idx]--;
+    }
+
+    // 2. Rise upward (negative gravity)
+    const above = idx - 320;
+    if (above >= 0 && this.solidMask[above] === 0 && this.cells[above] === CELL_TYPES.EMPTY) {
+      this.swap(idx, above);
+      return;
+    }
+
+    // 3. Diagonal upward drift with atmospheric wind sway
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    const d1 = above + dir;
+    if (d1 >= 0 && this.solidMask[d1] === 0 && this.cells[d1] === CELL_TYPES.EMPTY) {
+      this.swap(idx, d1);
+      return;
+    }
+
+    // 4. Horizontal drift
+    const s1 = idx + dir;
+    if (s1 >= 0 && s1 < this.totalCells && this.solidMask[s1] === 0 && this.cells[s1] === CELL_TYPES.EMPTY && Math.random() < 0.5) {
+      this.swap(idx, s1);
+    }
+  }
+
+  updateSand(x, y, idx) {
+    // 1. Direct fall (sinks through fluids: water, oil, smoke)
+    const below = idx + 320;
+    if (below < this.totalCells && this.solidMask[below] === 0) {
+      const bCell = this.cells[below];
+      if (bCell === CELL_TYPES.EMPTY || bCell === CELL_TYPES.WATER || bCell === CELL_TYPES.OIL || bCell === CELL_TYPES.SMOKE) {
+        this.swap(idx, below);
+        return;
+      }
+    }
+
+    // 2. Diagonal cascade (creates natural 45-degree angle of repose dunes)
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    const d1 = below + dir;
+    const d2 = below - dir;
+
+    if (d1 < this.totalCells && this.solidMask[d1] === 0) {
+      const t1 = this.cells[d1];
+      if (t1 === CELL_TYPES.EMPTY || t1 === CELL_TYPES.WATER || t1 === CELL_TYPES.OIL || t1 === CELL_TYPES.SMOKE) {
+        this.swap(idx, d1);
+        return;
+      }
+    }
+    if (d2 < this.totalCells && this.solidMask[d2] === 0) {
+      const t2 = this.cells[d2];
+      if (t2 === CELL_TYPES.EMPTY || t2 === CELL_TYPES.WATER || t2 === CELL_TYPES.OIL || t2 === CELL_TYPES.SMOKE) {
+        this.swap(idx, d2);
+      }
     }
   }
 

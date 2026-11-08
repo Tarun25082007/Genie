@@ -290,6 +290,201 @@ export const THEME_SETS = {
         voiceBaseFreq: 130
       }
     ]
+  },
+
+  arabian_nights: {
+    id: 'arabian_nights',
+    name: 'Set 4: Arabian Nights & Desert Lamp',
+    subtitle: 'Golden Dunes & Desert Oasis • 3 Wishes',
+    maxWishes: 3,
+    defaultVariant: 'aladdin_jinni',
+    role: 'Grand Djinn of the Golden Dunes and Desert Lamp',
+    introDialogue: 'AT LAST, THE LAMP IS RUBBED! I am the Djinn of the Golden Desert! Three wishes are yours, mortal!',
+    victoryDialogue: 'A MASTER OF WORDS AND SPIRIT! Your three wishes are granted without shattering your mortal form.',
+    personaPrompt: 'Speak like an ancient, booming theatrical magical djinn from the Arabian Nights tale, dramatic, generous, and poetic.',
+    chamberColors: {
+      bgTop: '#08091e',
+      bgBottom: '#2c1840',
+      brickPrimary: '#74383a',
+      brickSecondary: '#4f2425',
+      brickMortar: '#180a14',
+      torchFlame: '#ffd166',
+      accentHex: '#ffd166'
+    },
+    genieDefaults: {
+      archetype: 'DJINN_CLASSIC',
+      variant: 'aladdin_jinni',
+      primaryColor: '#4361ee',
+      secondaryColor: '#ffd166',
+      eyeColor: '#ffd166',
+      relic: 'MAGIC_LAMP',
+      auraParticleType: 'GOLD',
+      voiceBaseFreq: 130
+    },
+    entityVariants: [
+      {
+        id: 'aladdin_jinni',
+        name: 'Jinni of the Lamp (Blue Djinn)',
+        subtitle: 'Ancient Desert Vault • 3 Wishes',
+        archetype: 'DJINN_CLASSIC',
+        maxWishes: 3,
+        role: 'Grand Blue Djinn of the Brass Lamp',
+        introDialogue: 'TEN THOUSAND YEARS WILL GIVE YOU SUCH A CRICK IN THE NECK! Three wishes, master!',
+        victoryDialogue: 'THREE WISHES DOWN AND YOU STILL HAVE ALL YOUR LIMBS! Truly legendary!',
+        primaryColor: '#4361ee',
+        secondaryColor: '#ffd166',
+        eyeColor: '#ffd166',
+        relic: 'MAGIC_LAMP',
+        auraParticleType: 'GOLD',
+        voiceBaseFreq: 130
+      },
+      {
+        id: 'desert_simoom',
+        name: 'Simoom (Whirlwind of Sand)',
+        subtitle: 'Endless Sirocco • 3 Wishes',
+        archetype: 'DRAGON_SHENRON',
+        maxWishes: 3,
+        role: 'Living Vortex of Shifting Sahara Dunes',
+        introDialogue: 'THE DESERT STORM SWELLS! Speak your three desires before the sands bury your footprints!',
+        victoryDialogue: 'THE STORM DIES DOWN IN RESPECT. You walk through the desert unblemished!',
+        primaryColor: '#d97706',
+        secondaryColor: '#fde68a',
+        eyeColor: '#ffffff',
+        relic: 'DESERT_AMULET',
+        auraParticleType: 'SAND',
+        voiceBaseFreq: 110
+      }
+    ]
+  },
+
+  cyberpunk_2099: {
+    id: 'cyberpunk_2099',
+    name: 'Set 5: Neon Djinn 2099',
+    subtitle: 'Megacity Matrix & Synthetic AI • 3 Wishes',
+    maxWishes: 3,
+    defaultVariant: 'synthetic_ai',
+    role: 'Sentient Quantum Subroutine & Synthetic Djinn Matrix',
+    introDialogue: 'GREETINGS USER. Quantum wishes compiled into execution buffer. Allocate 3 runtime threads!',
+    victoryDialogue: 'RUNTIME EXECUTION COMPLETED: 0 FATAL SYSTEM EXCEPTIONS. User process integrity maintained!',
+    personaPrompt: 'Speak like a hyper-advanced synthetic AI neural network with robotic technical jargon, stack traces, and dry cyberpunk humor.',
+    chamberColors: {
+      bgTop: '#04030d',
+      bgBottom: '#1c0f38',
+      brickPrimary: '#2b2d42',
+      brickSecondary: '#1d1e2c',
+      brickMortar: '#070710',
+      torchFlame: '#00f5d4',
+      accentHex: '#00f5d4'
+    },
+    genieDefaults: {
+      archetype: 'DRAGON_SUPER',
+      variant: 'synthetic_ai',
+      primaryColor: '#00f5d4',
+      secondaryColor: '#f72585',
+      eyeColor: '#ffffff',
+      relic: 'SUPERCOMPUTER_CORE',
+      auraParticleType: 'SPARK',
+      voiceBaseFreq: 180
+    },
+    entityVariants: [
+      {
+        id: 'synthetic_ai',
+        name: 'Nexus-9 (Synthetic AI Djinn)',
+        subtitle: 'Cyber Sub-Net • 3 Wishes',
+        archetype: 'DRAGON_SUPER',
+        maxWishes: 3,
+        role: 'Quantum Artificial Superintelligence Matrix',
+        introDialogue: 'ESTABLISHING NEURAL HANDSHAKE. Three wishes allocated in hypervisor memory. State inputs!',
+        victoryDialogue: 'STACK INTEGRITY VERIFIED. 0 SEGFAULTS DETECTED. User granted root clearance.',
+        primaryColor: '#00f5d4',
+        secondaryColor: '#f72585',
+        eyeColor: '#ffffff',
+        relic: 'SUPERCOMPUTER_CORE',
+        auraParticleType: 'SPARK',
+        voiceBaseFreq: 180
+      },
+      {
+        id: 'glitch_daemon',
+        name: 'Null_Ptr (Corrupted Glitch Daemon)',
+        subtitle: 'Darkweb Underflow • 2 Wishes',
+        archetype: 'DRAGON_SHADOW',
+        maxWishes: 2,
+        role: 'Corrupted Zero-Day Buffer Overflow Daemon',
+        introDialogue: '0xDEADBEEF! Memory corrupting! Suffer the memory leak of two unhandled wishes!',
+        victoryDialogue: 'PATCH APPLIED?! Exception handled without core dumping player vessel!',
+        primaryColor: '#ff0055',
+        secondaryColor: '#7928ca',
+        eyeColor: '#00ffcc',
+        relic: 'CRACKED_DRAGON_BALL',
+        auraParticleType: 'ASH',
+        voiceBaseFreq: 195
+      }
+    ]
+  },
+
+  cosmic_void: {
+    id: 'cosmic_void',
+    name: 'Set 6: Cosmic Void & Outer Gods',
+    subtitle: 'R’lyeh Deep & Non-Euclidean Chasm • 3 Wishes',
+    maxWishes: 3,
+    defaultVariant: 'cthulhu_sleeper',
+    role: 'Slumbering Cosmic Deity of the Non-Euclidean Void',
+    introDialogue: 'PH’NGLUI MGLW’NAFH... Three wishes from the cold stars beyond your fragile mortal comprehension!',
+    victoryDialogue: 'YOUR SANITY REMAINS UNBROKEN AGAINST THE ABYSS. Return to your waking dream, mortal.',
+    personaPrompt: 'Speak like an ancient Lovecraftian deity from beyond time, terrifying, cosmic, unfathomable, and indifferent to human scale.',
+    chamberColors: {
+      bgTop: '#05050f',
+      bgBottom: '#150a24',
+      brickPrimary: '#2d1b4e',
+      brickSecondary: '#190e2b',
+      brickMortar: '#06020a',
+      torchFlame: '#a855f7',
+      accentHex: '#a855f7'
+    },
+    genieDefaults: {
+      archetype: 'DRAGON_PORUNGA',
+      variant: 'cthulhu_sleeper',
+      primaryColor: '#2e1065',
+      secondaryColor: '#10b981',
+      eyeColor: '#22c55e',
+      relic: 'FORBIDDEN_TOME',
+      auraParticleType: 'ACID',
+      voiceBaseFreq: 65
+    },
+    entityVariants: [
+      {
+        id: 'cthulhu_sleeper',
+        name: 'The Slumbering Sleeper',
+        subtitle: 'Sunken R’lyeh • 3 Wishes',
+        archetype: 'DRAGON_PORUNGA',
+        maxWishes: 3,
+        role: 'High Priest of the Great Old Ones',
+        introDialogue: 'THE STARS ARE ALIGNED. Three covenants across the black ocean of infinity!',
+        victoryDialogue: 'THE COSMOS YAWNS. You survive the gaze of the sunken city intact.',
+        primaryColor: '#064e3b',
+        secondaryColor: '#047857',
+        eyeColor: '#a7f3d0',
+        relic: 'FORBIDDEN_TOME',
+        auraParticleType: 'ACID',
+        voiceBaseFreq: 65
+      },
+      {
+        id: 'yog_sothoth',
+        name: 'The Lurker at the Threshold',
+        subtitle: 'Beyond All Dimensions • 3 Wishes',
+        archetype: 'DRAGON_SUPER',
+        maxWishes: 3,
+        role: 'Key and Guardian of the Dimensional Gates',
+        introDialogue: 'I AM THE GATE, I AM THE KEY. Past, present, future—all are one. Speak your three desires!',
+        victoryDialogue: 'THE SPHERES COALESCE IN HARMONY. Your mortal tether endures.',
+        primaryColor: '#701a75',
+        secondaryColor: '#d946ef',
+        eyeColor: '#fef08a',
+        relic: 'SUPERCOMPUTER_CORE',
+        auraParticleType: 'SPARK',
+        voiceBaseFreq: 75
+      }
+    ]
   }
 };
 
@@ -742,6 +937,292 @@ export const PIXEL_SPRITES = {
       '....WWWWWW......',
       '..WWWWWWWWWW....',
       '.WWWWWWWWWWWW...',
+      '................'
+    ]
+  },
+  BALLOON: {
+    palette: {
+      '.': null,
+      'R': '#ef233c',
+      'r': '#d90429',
+      'h': '#ff758f',
+      'k': '#495057',
+      'w': '#ffffff'
+    },
+    matrix: [
+      '.....rrrrr......',
+      '...rrRRRRRrr....',
+      '..rRRRRRhRRRr...',
+      '.rRRRRRhwhRRRr..',
+      '.rRRRRRhhRRRRr..',
+      'rRRRRRRRRRRRRRr.',
+      'rRRRRRRRRRRRRRr.',
+      'rRRRRRRRRRRRRRr.',
+      '.rRRRRRRRRRRRr..',
+      '..rRRRRRRRRRr...',
+      '...rrRRRRRrr....',
+      '.....rrRrr......',
+      '.......r........',
+      '......kk........',
+      '.......k........',
+      '......kk........'
+    ]
+  },
+  EXAM_SHEET: {
+    palette: {
+      '.': null,
+      'W': '#ffffff',
+      'w': '#e2e8f0',
+      'b': '#94a3b8',
+      'R': '#dc2626',
+      'D': '#475569'
+    },
+    matrix: [
+      '..WWWWWWWWWWWW..',
+      '..Wb........wW..',
+      '..Wb.RRR....wW..',
+      '..Wb.R......wW..',
+      '..Wb.RR..-..wW..',
+      '..Wb.R......wW..',
+      '..Wb.R......wW..',
+      '..Wb........wW..',
+      '..Wb.DDDDDD.wW..',
+      '..Wb.DDDDDD.wW..',
+      '..Wb........wW..',
+      '..Wb.DDDDDD.wW..',
+      '..Wb.DDDDDD.wW..',
+      '..Wb........wW..',
+      '..WwwwwwwwwwwW..',
+      '..WWWWWWWWWWWW..'
+    ]
+  },
+  HORNED_DEER: {
+    palette: {
+      '.': null,
+      'B': '#78350f',
+      'b': '#92400e',
+      'L': '#b45309',
+      'H': '#fde68a',
+      'W': '#ffffff',
+      'k': '#1c1917'
+    },
+    matrix: [
+      '..H..H....H..H..',
+      '..HHHH....HHHH..',
+      '...HH......HH...',
+      '....bBBBBBBb....',
+      '...bBWkBBBkWBb..',
+      '...bBBBBBBBBBb..',
+      '....bBBLkLBBb...',
+      '.....bbBBbb.....',
+      '....bBBBBBBb....',
+      '...bBBBBBBBBb...',
+      '..bBBBBBBBBBBb..',
+      '..bBBBBBBBBBBb..',
+      '..bb........bb..',
+      '..bB........Bb..',
+      '..kk........kk..',
+      '................'
+    ]
+  },
+  GIANT_SANDWICH: {
+    palette: {
+      '.': null,
+      'B': '#d97706',
+      'b': '#b45309',
+      'S': '#fef08a',
+      'G': '#16a34a',
+      'R': '#dc2626',
+      'Y': '#facc15',
+      'M': '#78350f'
+    },
+    matrix: [
+      '....bbBBBBbb....',
+      '..bbBBBBBBBBbb..',
+      '.bBBBBBBBBBBBBb.',
+      '.bBBBBSSBBSSBBb.',
+      '..bbBBBBBBBBbb..',
+      '.GGGGGGGGGGGGGG.',
+      '.RRRRRR..RRRRRR.',
+      '.YYYYYYYYYYYYYY.',
+      '.MMMMMMMMMMMMMM.',
+      '.GGGGGGGGGGGGGG.',
+      '.YYYYYYYYYYYYYY.',
+      '.bbBBBBBBBBBBbb.',
+      'bBBBBBBBBBBBBBBb',
+      'bBBBBBBBBBBBBBBb',
+      '.bbBBBBBBBBBBbb.',
+      '....bbbbbbbb....'
+    ]
+  },
+  SPORTS_CAR: {
+    palette: {
+      '.': null,
+      'R': '#ef233c',
+      'r': '#9d0208',
+      'W': '#ffffff',
+      'G': '#38bdf8',
+      'k': '#111827',
+      'S': '#94a3b8',
+      'Y': '#fde047'
+    },
+    matrix: [
+      '................',
+      '................',
+      '.....rrrrrr.....',
+      '....rRGGGGGr....',
+      '...rRGGGGGGGr...',
+      '..rRRRRRRRRRRr..',
+      '.rRRRRRRRRRRRRrY',
+      'rRRRRRRRRRRRRRRr',
+      'rrrrrrrrrrrrrrrr',
+      '.kSkk......kSkk.',
+      'kkSskk....kkSskk',
+      '.kSkk......kSkk.',
+      '................',
+      '................',
+      '................',
+      '................'
+    ]
+  },
+  TUNGSTEN_SARCOPHAGUS: {
+    palette: {
+      '.': null,
+      'T': '#334155',
+      't': '#1e293b',
+      'L': '#64748b',
+      'G': '#ffd166',
+      'k': '#0f172a'
+    },
+    matrix: [
+      '...tttttttttt...',
+      '..tTTTTTTTTTTt..',
+      '.tTTTTTGGTTTTTt.',
+      '.tTTTTGGGGTTTTt.',
+      '.tTTTTTGGTTTTTt.',
+      '.tTTLLTTTTLLTTt.',
+      '.tTTLLTTTTLLTTt.',
+      '.tTTTTTTTTTTTTt.',
+      '.tTTTGGGGGGTTTt.',
+      '.tTTTTTTTTTTTTt.',
+      '.tTTLLTTTTLLTTt.',
+      '.tTTLLTTTTLLTTt.',
+      '.tTTTTTTTTTTTTt.',
+      '..tTTTTTTTTTTt..',
+      '...tttttttttt...',
+      '....kkkkkkkk....'
+    ]
+  },
+  SAFE: {
+    palette: {
+      '.': null,
+      'S': '#475569',
+      's': '#334155',
+      'D': '#1e293b',
+      'L': '#94a3b8',
+      'G': '#fde047'
+    },
+    matrix: [
+      '.DDDDDDDDDDDDDD.',
+      'DSSSSSSSSSSSSSSD',
+      'DSLLLLLLLLLLLLsD',
+      'DSLssssssssssLsD',
+      'DSLss...G...sLsD',
+      'DSLss..GGG..sLsD',
+      'DSLss...G...sLsD',
+      'DSLss.......sLsD',
+      'DSLssssssssssLsD',
+      'DSLssssssssssLsD',
+      'DSLssssssssssLsD',
+      'DSLLLLLLLLLLLLsD',
+      'DSSSSSSSSSSSSSSD',
+      '.DDDDDDDDDDDDDD.',
+      '..DD........DD..',
+      '..DD........DD..'
+    ]
+  },
+  STATUE_FRIEND: {
+    palette: {
+      '.': null,
+      'I': '#64748b',
+      'i': '#475569',
+      'D': '#334155',
+      'L': '#94a3b8',
+      'H': '#ef4444'
+    },
+    matrix: [
+      '.....iiIIii.....',
+      '....iIILLIIi....',
+      '...iIILLLLIIi...',
+      '...iIIi..iIIi...',
+      '....iIIIIIIi....',
+      '..iiIIIIIIIIii..',
+      '.iIIII.HH.IIIIi.',
+      'iIIIIIHHHHIIIIIi',
+      'iIIIII.HH.IIIIIi',
+      'iIIIIIIIIIIIIIIi',
+      '.iIIIIIIIIIIIIi.',
+      '..iIIIIIIIIIIi..',
+      '...iIIi..iIIi...',
+      '...iIIi..iIIi...',
+      '...iIIi..iIIi...',
+      '...DDDD..DDDD...'
+    ]
+  },
+  METEOR: {
+    palette: {
+      '.': null,
+      'F': '#ffedd5',
+      'Y': '#fde047',
+      'O': '#f97316',
+      'R': '#dc2626',
+      'D': '#451a03',
+      'd': '#78350f'
+    },
+    matrix: [
+      '........FY......',
+      '.......FOYR.....',
+      '......FOYYOR....',
+      '.....FOYYOR.....',
+      '....ddDDdd......',
+      '...dDddDd.......',
+      '..dDDDDdd.......',
+      '..dDDDDDDd......',
+      '.dDDDDDDDDd.....',
+      '.dDDDDdDDDdd....',
+      '..dDDddDDDdd....',
+      '...ddDDDDdd.....',
+      '....dddddd......',
+      '.....dddd.......',
+      '......dd........',
+      '................'
+    ]
+  },
+  SUPERCOMPUTER_CORE: {
+    palette: {
+      '.': null,
+      'C': '#00f5d4',
+      'c': '#00bbf9',
+      'M': '#f72585',
+      'D': '#0b0c26',
+      'W': '#ffffff'
+    },
+    matrix: [
+      '..cccccccccccc..',
+      '.cDDDDDDDDDDDDc.',
+      '.cDCWWCDDDCWWCDc.',
+      '.cDCWWCDDDCWWCDc.',
+      '.cDCCCCDDCCCCCDc.',
+      '.cDDDDMMMMDDDDc.',
+      '.cDDDDMMMMDDDDc.',
+      '.cDCcDcDcDcDcCDc.',
+      '.cDCcDcDcDcDcCDc.',
+      '.cDDDDMMMMDDDDc.',
+      '.cDCCCCDDCCCCCDc.',
+      '.cDCWWCDDDCWWCDc.',
+      '.cDCWWCDDDCWWCDc.',
+      '.cDDDDDDDDDDDDc.',
+      '..cccccccccccc..',
       '................'
     ]
   }
