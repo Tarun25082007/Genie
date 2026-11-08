@@ -24,7 +24,9 @@ import {
   CheckCircle2,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  Cpu,
+  Zap
 } from 'lucide-react';
 
 export default function App() {
@@ -240,6 +242,14 @@ export default function App() {
     setResetTrigger((prev) => prev + 1);
   };
 
+  const handleToggleOllama = () => {
+    audioSynth.playButton();
+    const nextProvider = settings.provider === 'ollama_strong' ? 'ollama_weak' : 'ollama_strong';
+    const next = { ...settings, provider: nextProvider };
+    setSettings(next);
+    localStorage.setItem('genie_provider', nextProvider);
+  };
+
   const handleSelectTheme = (themeId) => {
     const freshThemes = getAvailableThemes();
     setThemes(freshThemes);
@@ -306,6 +316,36 @@ export default function App() {
             <span className="hidden sm:inline">
               {customization?.genie?.name ? customization.genie.name.split(' ')[0].toUpperCase() : currentThemeId.split('_')[0].toUpperCase()}
             </span>
+          </button>
+
+          {/* Quick Ollama Strong / Weak Model Toggle */}
+          <button
+            onClick={handleToggleOllama}
+            title={`Active Local Model: ${settings.provider === 'ollama_strong' ? 'Strong (qwen2.5:7b)' : 'Weak (llama3.2:3b)'}. Click to switch.`}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[10px] font-bold tracking-wider transition-all shadow-sm ${
+              settings.provider === 'ollama_strong'
+                ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 text-amber-300'
+                : settings.provider === 'ollama_weak'
+                ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/50 text-emerald-300'
+                : 'bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-500/50 text-indigo-300'
+            }`}
+          >
+            {settings.provider === 'ollama_strong' ? (
+              <>
+                <Cpu className="w-3.5 h-3.5 text-amber-400" />
+                <span>STRONG (qwen2.5:7b)</span>
+              </>
+            ) : settings.provider === 'ollama_weak' ? (
+              <>
+                <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                <span>WEAK (llama3.2:3b)</span>
+              </>
+            ) : (
+              <>
+                <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                <span>{settings.provider.toUpperCase()}</span>
+              </>
+            )}
           </button>
 
           {/* Settings Modal Toggle */}
