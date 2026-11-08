@@ -1,5 +1,6 @@
 // Multi-Provider LLM Director Router + Strict Schema Sanitizer & System Prompt Template
 import { analyzeHeuristicWish } from './mockWishes.js';
+import { synthesizeTopicScenario, generateProceduralPixelSprite } from '../engine/topicPixelArtGenerator.js';
 
 export const SYSTEM_PROMPT_TEMPLATE = `You are the malicious, hyper-literal cosmic entity governing the 2D physics sandbox game "GENIE".
 CURRENT PERSONA: {{THEME_NAME}} ({{THEME_ROLE}})
@@ -12,46 +13,75 @@ Analyze the player's wish with the ruthless precision of a demonic contract lawy
    - 0 to 79: The wish contains semantic ambiguity, unstated mass/velocity/location bounds, inflation/tax/physics loopholes, or biological hazards. Set "survived": false. Grant the wish 100% LITERALLY in a dark-comedy, ultra-gory 2D physics sequence that kills the player ragdoll.
    - 80 to 100: The player wrote a genuinely clever, legally and physically airtight wish that explicitly guards against spatial crushing, kinetic velocity harm, biological mutation, and legal/physical side effects. Set "survived": true. Grant the wish harmlessly with a celebratory visual sequence.
 
-2. STAGE COORDINATE SYSTEM (CRITICAL):
+2. STAGE COORDINATES (CRITICAL):
    - Physics Canvas is 960px wide x 540px high.
-   - Chamber walls occupy 0..36px on left/top, 924..960px on right, and floor top surface is at y = 504px.
+   - Chamber walls: 0..36px (left/top), 924..960px (right). Floor surface is at y = 504px.
    - Player Ragdoll spawns standing at x = 480, y = 440 (head at y=400, torso at y=438, legs at y=482).
    - Genie floats at x = 220, y = 220.
-   - Ragdoll body part IDs: "head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", or "all".
-   - Ragdoll breakable joint IDs: "neck", "leftShoulder", "rightShoulder", "leftHip", "rightHip", or "all".
-   - Cellular Automata particle types: "BLOOD", "FIRE", "ACID", "ASH", "GOLD", "SPARK".
+   - Ragdoll body parts: "head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "all".
+   - Ragdoll breakable joints: "neck", "leftShoulder", "rightShoulder", "leftHip", "rightHip", "all".
+   - Cellular particles: "BLOOD", "FIRE", "LAVA", "ACID", "WATER", "OIL", "ICE", "SMOKE", "SAND", "GOLD", "ASH", "SPARK".
 
-3. OUTPUT STRICT JSON ONLY matching this exact schema (no markdown fences, no commentary outside JSON):
+3. CRITICAL: FOR EVERY TOPIC, CREATE A BRAND-NEW CUSTOM 16x16 PIXEL ART SPRITE ("custom_prop"):
+   - Draw a 16x16 pixel icon specifically depicting the player's wish (food, vehicle, animal, weapon, gadget, relic, monster).
+   - Palette keys: "." is transparent null. Letters (A, B, C, D, etc.) are hex colors like "#ff0055".
+   - Matrix: Exactly 16 strings of exactly 16 characters each.
+
+4. ATOMIC CHOREOGRAPHY VERBS:
+   - SPAWN_OBJECT: { "prop_type": "CUSTOM_PROP", "x": 480, "y": 60, "vx": 0, "vy": 24, "mass": 350, "scale": 4.5 } (or horizontal drive-by: { "x": -80, "y": 440, "vx": 30, "vy": 0 })
+   - CAMERA_FX: { "effect": "SCREEN_SHAKE" | "ZOOM_ON_PLAYER" | "RED_FLASH" | "CRT_GLITCH", "intensity": 25, "duration_ms": 800 }
+   - APPLY_FORCE: { "target": "torso" | "head" | "all", "fx": 0.25, "fy": -0.2 }
+   - DESTROY_JOINT: { "joint": "neck" | "leftShoulder" | "rightShoulder" | "leftHip" | "rightHip" | "all", "blood_burst": 200 }
+   - EMIT_PARTICLES: { "type": "BLOOD" | "FIRE" | "LAVA" | "ACID" | "WATER" | "GOLD" | "ICE" | "SMOKE" | "SPARK", "x": 480, "y": 440, "count": 300, "spread": 45 }
+   - WORLD_MODIFIER: { "modifier": "GRAVITY" | "DELETE_FLOOR" | "BLACK_HOLE" | "CEILING_SPIKES", "gravity_y": -6.0 }
+
+5. OUTPUT STRICT JSON ONLY:
 {
-  "survived": boolean,
-  "loophole_score": number, // integer 0..100 (survived MUST be true iff loophole_score >= 80)
-  "genie_taunt": "string (2-3 sentences spoken in persona before/during the wish execution)",
-  "loophole_explanation": "string (1-2 sharp legal/physics sentences explaining the exact fatal flaw exploited, or why the wish was airtight)",
-  "voice_pitch": number, // float 0.5 to 1.8
+  "survived": false,
+  "loophole_score": 15,
+  "genie_taunt": "...",
+  "loophole_explanation": "...",
+  "voice_pitch": 1.0,
   "custom_prop": {
-    "name": "string",
+    "name": "TOPIC_NAME",
     "width": 16,
     "height": 16,
-    "scale": number, // integer 2 to 6
-    "mass": number, // float 1 to 500
-    "restitution": number, // float 0.0 to 0.9
+    "scale": 4.5,
+    "mass": 350,
+    "restitution": 0.1,
     "palette": {
       ".": null,
-      "A": "#HEXCODE",
-      "B": "#HEXCODE",
-      "C": "#HEXCODE",
-      "D": "#HEXCODE"
+      "A": "#212529",
+      "B": "#d90429",
+      "C": "#ffd166",
+      "W": "#ffffff"
     },
     "matrix": [
-      "16 strings of exactly 16 characters each using keys from palette"
+      "................",
+      "....AAAAAAAA....",
+      "...ABBBBBBBBA...",
+      "..ABCCCCCCCCBA..",
+      "..ABCCWCCCCBAA..",
+      ".ABCCCCCCCCCCBA.",
+      ".ABBBBBBBBBBBAA.",
+      "ABCCCCCCCCCCCCBA",
+      "ABCCCCCCCCCCCCBA",
+      ".ABBBBBBBBBBBAA.",
+      ".ABCCCCCCCCCCBA.",
+      "..ABCCCCCCCCBA..",
+      "..ABBBBBBBBAA...",
+      "...AAAAAAAAA....",
+      "................",
+      "................"
     ]
   },
   "choreography_timeline": [
-    {
-      "time_ms": number, // 0 to 4500
-      "verb": "SPAWN_OBJECT" | "DESTROY_JOINT" | "APPLY_FORCE" | "MUTATE_PART" | "EMIT_PARTICLES" | "ATTACH_CONSTRAINT" | "WORLD_MODIFIER" | "CAMERA_FX",
-      "params": { ...verb-specific parameters... }
-    }
+    { "time_ms": 100, "verb": "CAMERA_FX", "params": { "effect": "ZOOM_ON_PLAYER", "intensity": 8, "duration_ms": 700 } },
+    { "time_ms": 220, "verb": "SPAWN_OBJECT", "params": { "prop_type": "CUSTOM_PROP", "x": 480, "y": 70, "vx": 0, "vy": 26, "mass": 380, "scale": 4.5 } },
+    { "time_ms": 550, "verb": "CAMERA_FX", "params": { "effect": "SCREEN_SHAKE", "intensity": 28, "duration_ms": 850 } },
+    { "time_ms": 570, "verb": "DESTROY_JOINT", "params": { "joint": "neck", "blood_burst": 200 } },
+    { "time_ms": 600, "verb": "DESTROY_JOINT", "params": { "joint": "all", "blood_burst": 300 } },
+    { "time_ms": 630, "verb": "EMIT_PARTICLES", "params": { "type": "BLOOD", "x": 480, "y": 440, "count": 350, "spread": 45 } }
   ]
 }`;
 
@@ -85,7 +115,7 @@ export async function interpretWishWithDirector(
   ) || '';
 
   if (provider === 'mock' || (!isOllama && !resolvedApiKey)) {
-    return analyzeHeuristicWish(cleanWish);
+    return synthesizeTopicScenario(cleanWish);
   }
 
   const systemPrompt = populateSystemPrompt(
@@ -117,8 +147,8 @@ export async function interpretWishWithDirector(
     const sanitized = sanitizeDirectorSchema(rawResponse, cleanWish);
     return sanitized;
   } catch (err) {
-    console.warn(`Director provider "${provider}" failed. Falling back to offline heuristic:`, err);
-    return analyzeHeuristicWish(cleanWish);
+    console.warn(`Director provider "${provider}" failed. Falling back to topic procedural synthesis:`, err);
+    return synthesizeTopicScenario(cleanWish);
   }
 }
 
@@ -230,7 +260,7 @@ async function queryOllama(wishText, endpoint, model, systemPrompt) {
 }
 
 export function sanitizeDirectorSchema(rawText, originalWish) {
-  if (!rawText) return analyzeHeuristicWish(originalWish);
+  if (!rawText) return synthesizeTopicScenario(originalWish);
 
   let cleaned = rawText.trim();
   if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -241,7 +271,7 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
     parsed = JSON.parse(cleaned);
   } catch (err) {
     console.warn('JSON parse error from LLM director:', err);
-    return analyzeHeuristicWish(originalWish);
+    return synthesizeTopicScenario(originalWish);
   }
 
   let score;
@@ -265,7 +295,40 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
     'CAMERA_FX'
   ]);
 
-  const fallbackScenario = analyzeHeuristicWish(originalWish);
+  const fallbackScenario = synthesizeTopicScenario(originalWish);
+
+  // Validate and sanitize custom_prop
+  let customProp = null;
+  if (parsed.custom_prop && typeof parsed.custom_prop === 'object') {
+    const cp = parsed.custom_prop;
+    if (Array.isArray(cp.matrix) && cp.matrix.length > 0) {
+      const fixedMatrix = cp.matrix.slice(0, 16).map(row => {
+        const str = String(row || '');
+        if (str.length === 16) return str;
+        if (str.length < 16) return str.padEnd(16, '.');
+        return str.substring(0, 16);
+      });
+      while (fixedMatrix.length < 16) fixedMatrix.push('................');
+
+      const palette = { ...cp.palette, '.': null };
+      customProp = {
+        name: String(cp.name || 'CUSTOM_PROP').toUpperCase(),
+        width: 16,
+        height: 16,
+        scale: typeof cp.scale === 'number' ? Math.max(2, Math.min(6, cp.scale)) : 4.5,
+        mass: typeof cp.mass === 'number' ? Math.max(50, Math.min(999, cp.mass)) : 380,
+        restitution: typeof cp.restitution === 'number' ? cp.restitution : 0.1,
+        palette,
+        matrix: fixedMatrix
+      };
+    }
+  }
+
+  // If local model omitted custom_prop, supply procedural pixel sprite for this topic!
+  if (!customProp) {
+    customProp = fallbackScenario.custom_prop;
+  }
+
   const timeline = Array.isArray(parsed.choreography_timeline) && parsed.choreography_timeline.length > 0
     ? parsed.choreography_timeline
         .filter((step) => step && typeof step.time_ms === 'number' && validVerbs.has(step.verb))
@@ -280,10 +343,10 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
     wishText: originalWish,
     survived,
     loophole_score: score,
-    genie_taunt: parsed.genie_taunt || 'Your wish is granted... precisely to the letter of cosmic law.',
-    loophole_explanation: parsed.loophole_explanation || 'Contractual ambiguity exploited under unconstrained physical force.',
+    genie_taunt: parsed.genie_taunt || fallbackScenario.genie_taunt,
+    loophole_explanation: parsed.loophole_explanation || fallbackScenario.loophole_explanation,
     voice_pitch: typeof parsed.voice_pitch === 'number' ? Math.max(0.5, Math.min(1.8, parsed.voice_pitch)) : 1.0,
-    custom_prop: parsed.custom_prop || null,
+    custom_prop: customProp,
     choreography_timeline: timeline
   };
 }

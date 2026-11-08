@@ -200,9 +200,15 @@ export default function GameCanvas({
           ACID: CELL_TYPES.ACID,
           ASH: CELL_TYPES.ASH,
           GOLD: CELL_TYPES.GOLD,
-          SPARK: CELL_TYPES.SPARK
+          SPARK: CELL_TYPES.SPARK,
+          WATER: CELL_TYPES.WATER,
+          LAVA: CELL_TYPES.LAVA,
+          OIL: CELL_TYPES.OIL,
+          ICE: CELL_TYPES.ICE,
+          SMOKE: CELL_TYPES.SMOKE,
+          SAND: CELL_TYPES.SAND
         };
-        const cellType = typeMap[params.type] || CELL_TYPES.SPARK;
+        const cellType = typeMap[params.type?.toUpperCase()] || CELL_TYPES.SPARK;
         cellularGridRef.current.spawnCircle(
           params.x ?? 480,
           params.y ?? 440,

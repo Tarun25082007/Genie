@@ -123,11 +123,21 @@ export default function App() {
     setActiveCertificate(null);
     vfxSystem.spawnEmote(480, 400, 'QUESTION');
 
+    const providerLabel = settings.provider === 'ollama_strong'
+      ? `Local Ollama (${settings.credentials?.ollamaStrongModel || 'llama3.3'})`
+      : settings.provider === 'ollama_weak'
+      ? `Local Ollama (${settings.credentials?.ollamaWeakModel || 'llama3.2'})`
+      : settings.provider === 'groq'
+      ? 'Groq Cloud (Llama-3.3)'
+      : settings.provider === 'gemini'
+      ? 'Gemini Cloud'
+      : 'Local Director';
+
     setCurrentDialogue({
       speaker: customization?.player?.name || 'Player',
       text: `"${wishText}"`,
       loopholeScore: 90,
-      loopholeExplanation: 'Wish submitted to the cosmic contract registrar...',
+      loopholeExplanation: `[${providerLabel}] Directing newly synthesized choreography & custom pixel sprite...`,
       voicePitch: 1.0,
       survived: true
     });

@@ -23,16 +23,17 @@ export function getOffscreenPixelSprite(spriteKeyOrDef, pixelSize = 3) {
     matrix = sprite.matrix;
     palette = sprite.palette;
   } else if (spriteKeyOrDef && spriteKeyOrDef.matrix) {
-    cacheKey = `${spriteKeyOrDef.name || 'custom'}_${pixelSize}`;
+    const matrixStr = Array.isArray(spriteKeyOrDef.matrix) ? spriteKeyOrDef.matrix.join('') : '';
+    cacheKey = `${spriteKeyOrDef.name || 'custom'}_${matrixStr}_${pixelSize}`;
     if (spriteCanvasCache.has(cacheKey)) return spriteCanvasCache.get(cacheKey);
     matrix = spriteKeyOrDef.matrix;
-    palette = spriteKeyOrDef.palette;
+    palette = spriteKeyOrDef.palette || {};
   } else {
     return null;
   }
 
   const rows = matrix.length;
-  const cols = matrix[0].length;
+  const cols = matrix[0]?.length || 16;
 
   const canvas = document.createElement('canvas');
   canvas.width = cols * pixelSize;
@@ -42,8 +43,11 @@ export function getOffscreenPixelSprite(spriteKeyOrDef, pixelSize = 3) {
 
   for (let r = 0; r < rows; r++) {
     const row = matrix[r];
+    if (!row) continue;
     for (let c = 0; c < cols; c++) {
-      const color = palette[row[c]];
+      const char = row[c];
+      if (!char || char === '.') continue;
+      const color = palette[char] || '#ffd166';
       if (color) {
         ctx.fillStyle = color;
         ctx.fillRect(c * pixelSize, r * pixelSize, pixelSize, pixelSize);
@@ -122,29 +126,34 @@ export function createPropFromVerb(params, customPropDef) {
   const startX = params.x ?? 480;
   const startY = params.y ?? 90;
 
+  const effectiveCustomProp = (params.custom_prop && params.custom_prop.matrix)
+    ? params.custom_prop
+    : (customPropDef && customPropDef.matrix ? customPropDef : null);
+
   for (let i = 0; i < count; i++) {
     const offsetX = count > 1 ? (i - (count - 1) / 2) * spreadX : 0;
     const x = startX + offsetX;
     const y = startY - i * 30;
-    const rawProp = String(params.prop_type || 'ANVIL').toUpperCase();
+    const rawProp = String(params.prop_type || 'CUSTOM_PROP').toUpperCase();
     let body;
 
     if (rawProp.startsWith('TETRIS_')) {
       const tileSize = (params.scale || 4) * 5;
       body = createTetrisBody(rawProp, x, y, tileSize);
-    } else if ((rawProp === 'CUSTOM_PROP' || rawProp === 'CUSTOM') && customPropDef && customPropDef.matrix) {
-      const scale = customPropDef.scale || params.scale || 4;
+    } else if (effectiveCustomProp && (rawProp === 'CUSTOM_PROP' || rawProp === 'CUSTOM' || !PIXEL_SPRITES[rawProp])) {
+      // Whenever a custom prop is provided, render its unique 16x16 pixel sprite!
+      const scale = effectiveCustomProp.scale || params.scale || 4.5;
       const w = 16 * scale;
       const h = 16 * scale;
       body = Bodies.rectangle(x, y, w, h, {
-        mass: customPropDef.mass || params.mass || 150,
-        restitution: customPropDef.restitution || 0.1,
+        mass: effectiveCustomProp.mass || params.mass || 350,
+        restitution: effectiveCustomProp.restitution || 0.1,
         friction: 0.8,
-        label: 'prop_custom'
+        label: `prop_${(effectiveCustomProp.name || 'custom').toLowerCase()}`
       });
       body.customData = {
         propType: 'custom_sprite',
-        customDef: customPropDef,
+        customDef: effectiveCustomProp,
         width: w,
         height: h
       };
