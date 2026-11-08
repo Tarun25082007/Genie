@@ -36,15 +36,23 @@ export class PlayerRagdoll {
       rightLeg: 0
     };
     this.isDead = false;
+    this.health = 100;
+    this.maxHealth = 100;
+    this.sanity = 100;
+    this.sanityStage = 'SANE'; // 'SANE' | 'NERVOUS' | 'PARANOID' | 'INSANE'
     this.state = 'CALM'; // 'CALM' | 'PANIC' | 'SQUASHED' | 'BURNING' | 'FROZEN' | 'STRETCHED'
 
     // Terraria & Stardew Valley expressive life properties
+    this.spawnImmunityFrames = 90; // Immunity window on resurrection so joints settle smoothly
     this.hurtFlashFrames = 0;
     this.breathCycle = Math.random() * Math.PI * 2;
     this.breathScale = 1.0;
     this.isLookingUp = false;
     this.hasAlerted = false;
     this.hasPanicked = false;
+    this.insanityTimer = 0;
+    this.insanityAuraAngle = 0;
+    this.eyeWander = { x: 0, y: 0 };
 
     this.initRagdoll(startX, startY);
   }
@@ -99,6 +107,143 @@ export class PlayerRagdoll {
 
   stretch(synth = audioSynth) {
     this.setRagdollState('STRETCHED', synth);
+  }
+
+  // =========================================================================
+  // RESURRECTION & HEALING
+  // =========================================================================
+  resurrect(x = 480, y = 440, custom = null) {
+    // 1. Remove all remnants of previous body & gibs from physics world
+    Object.values(this.parts).forEach((p) => {
+      if (p) Composite.remove(this.world, p);
+    });
+    Object.values(this.constraints).forEach((c) => {
+      if (c) Composite.remove(this.world, c);
+    });
+    this.meatChunks.forEach((chunk) => {
+      if (chunk.body) Composite.remove(this.world, chunk.body);
+    });
+
+    // 2. Reset health, sanity, and bodily integrity to 100% pristine normal human
+    this.parts = {};
+    this.constraints = {};
+    this.stumps = [];
+    this.meatChunks = [];
+    this.partTints = {};
+    this.acidCorrosion = { head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
+    this.isDead = false;
+    this.health = 100;
+    this.maxHealth = 100;
+    this.sanity = 100;
+    this.sanityStage = 'SANE';
+    this.state = 'CALM';
+    this.hurtFlashFrames = 0;
+    this.isLookingUp = false;
+    this.hasAlerted = false;
+    this.hasPanicked = false;
+    this.spawnImmunityFrames = 90;
+    this.insanityTimer = 0;
+
+    if (custom) {
+      this.playerCustom = custom.player || custom;
+      this.colors = {
+        skin: this.playerCustom.skinColor || '#f5cba7',
+        shirt: this.playerCustom.shirtColor || '#3b82f6',
+        pants: this.playerCustom.pantsColor || '#1e293b',
+        hair: '#3d2618',
+        boots: '#0f172a'
+      };
+      this.hatStyle = this.playerCustom?.hatStyle || 'NONE';
+    }
+
+    // 3. Spawn pristine physical ragdoll bodies
+    this.initRagdoll(x, y);
+
+    // 4. Divine Resurrection Golden Chime & Aura Burst
+    vfxSystem.spawnResurrectionAura(x, y - 10);
+    audioSynth.playResurrectionChime();
+  }
+
+  // =========================================================================
+  // SANITY & MADNESS DESCENT
+  // =========================================================================
+  reduceSanity(amount, reason = '') {
+    if (this.isDead) return;
+    const oldStage = this.sanityStage;
+    this.sanity = Math.max(0, this.sanity - amount);
+
+    if (this.sanity >= 75) this.sanityStage = 'SANE';
+    else if (this.sanity >= 50) this.sanityStage = 'NERVOUS';
+    else if (this.sanity >= 25) this.sanityStage = 'PARANOID';
+    else this.sanityStage = 'INSANE';
+
+    const hx = this.parts.head?.position?.x || 480;
+    const hy = this.parts.head?.position?.y || 400;
+
+    // Trigger stage transition effects
+    if (oldStage !== this.sanityStage) {
+      if (this.sanityStage === 'NERVOUS') {
+        vfxSystem.spawnEmote(hx, hy, 'SWEAT');
+        const phrases = ["Wait... what?", "Is it safe?", "What's happening?"];
+        vfxSystem.spawnFloatingText(hx, hy - 25, phrases[Math.floor(Math.random() * phrases.length)], '#38bdf8', 13);
+      } else if (this.sanityStage === 'PARANOID') {
+        this.state = 'PANIC';
+        vfxSystem.spawnEmote(hx, hy, 'ALERT');
+        audioSynth.playHeartbeat();
+        const phrases = ["CANCEL THE WISH!", "WHAT IS THAT?!", "NO NO NO!"];
+        vfxSystem.spawnFloatingText(hx, hy - 25, phrases[Math.floor(Math.random() * phrases.length)], '#f97316', 15);
+      } else if (this.sanityStage === 'INSANE') {
+        this.state = 'PANIC';
+        vfxSystem.spawnEmote(hx, hy, 'INSANITY');
+        audioSynth.playInsaneLaugh();
+        audioSynth.playHeartbeat();
+        const phrases = ["HE HE HE...", "THE EYES ARE WATCHING!", "I CAN'T LOOK AWAY!"];
+        vfxSystem.spawnFloatingText(hx, hy - 25, phrases[Math.floor(Math.random() * phrases.length)], '#c084fc', 16);
+      }
+    }
+  }
+
+  restoreSanity(amount) {
+    this.sanity = Math.min(100, this.sanity + amount);
+    if (this.sanity >= 75) this.sanityStage = 'SANE';
+    else if (this.sanity >= 50) this.sanityStage = 'NERVOUS';
+    else if (this.sanity >= 25) this.sanityStage = 'PARANOID';
+    else this.sanityStage = 'INSANE';
+  }
+
+  // =========================================================================
+  // DAMAGE & ACTUAL DEATH
+  // =========================================================================
+  takeDamage(amount, sourcePos = null, synth = audioSynth, caEngine = null) {
+    if (this.isDead) return;
+
+    this.health = Math.max(0, this.health - amount);
+    this.hurtFlashFrames = 10;
+    vfxSystem.triggerHitStop(3);
+
+    const hx = this.parts.torso?.position?.x || 480;
+    const hy = this.parts.torso?.position?.y || 440;
+
+    vfxSystem.spawnFloatingText(hx, hy - 20, `-${amount}`, '#ef233c', 18);
+    synth.playBoneCrunch();
+
+    // Damage also deteriorates sanity
+    this.reduceSanity(amount * 0.5);
+
+    if (this.health <= 0) {
+      // NOW HE DIES!
+      this.isDead = true;
+      this.state = 'SQUASHED';
+      vfxSystem.spawnSoul(hx, hy);
+      vfxSystem.spawnFloatingText(hx, hy - 40, 'R.I.P.', '#fef08a', 20);
+      synth.playGoreCrunch();
+      synth.playBloodSpray();
+
+      // Dismember neck and limb on fatal trauma
+      this.severJoint('neck', caEngine, synth);
+      if (Math.random() < 0.6) this.severJoint('leftShoulder', caEngine, synth);
+      if (Math.random() < 0.6) this.severJoint('rightShoulder', caEngine, synth);
+    }
   }
 
   initRagdoll(x, y) {
@@ -212,11 +357,11 @@ export class PlayerRagdoll {
       })
     };
 
-    this.constraints.neck.maxStretch = 15;
-    this.constraints.leftShoulder.maxStretch = 18;
-    this.constraints.rightShoulder.maxStretch = 18;
-    this.constraints.leftHip.maxStretch = 18;
-    this.constraints.rightHip.maxStretch = 18;
+    this.constraints.neck.maxStretch = 75;
+    this.constraints.leftShoulder.maxStretch = 85;
+    this.constraints.rightShoulder.maxStretch = 85;
+    this.constraints.leftHip.maxStretch = 85;
+    this.constraints.rightHip.maxStretch = 85;
 
     Object.values(this.constraints).forEach((c) => {
       c.isBroken = false;
@@ -226,34 +371,67 @@ export class PlayerRagdoll {
     Composite.add(this.world, Object.values(this.constraints));
   }
 
-  // Upright posture stabilization keeping alive player standing
+  // Active procedural upright standing balance controller
+  // Keeps human standing firmly on two feet like a living character
   updatePosture() {
     if (this.isDead || !this.constraints.neck || this.constraints.neck.isBroken) return;
 
-    // Torso upright torque
     const torso = this.parts.torso;
-    if (torso) {
-      torso.torque = -torso.angle * 0.08;
-    }
-
-    // Head upright torque
     const head = this.parts.head;
-    if (head) {
-      head.torque = -head.angle * 0.05;
+    const leftLeg = this.parts.leftLeg;
+    const rightLeg = this.parts.rightLeg;
+    if (!torso || !head) return;
+
+    // 1. Upright torso & head balance torque
+    torso.torque = -torso.angle * 0.16;
+    head.torque = -head.angle * 0.12;
+
+    // 2. Active vertical standing spring (floor at y = 504, standing torso at y ~ 438)
+    if (torso.position.y > 425 && torso.position.y < 495) {
+      const targetY = 438;
+      const dy = targetY - torso.position.y;
+      const vy = torso.velocity.y;
+      const liftForce = (dy * 0.008) - (vy * 0.0035);
+      Body.applyForce(torso, torso.position, { x: 0, y: liftForce * (torso.mass || 4.5) });
     }
 
-    // Legs gentle stabilization
-    ['leftLeg', 'rightLeg'].forEach((legKey) => {
-      const leg = this.parts[legKey];
-      if (leg) {
-        leg.torque = -leg.angle * 0.04;
+    // 3. Legs posture & horizontal stance stabilization
+    if (leftLeg && rightLeg) {
+      leftLeg.torque = -leftLeg.angle * 0.08;
+      rightLeg.torque = -rightLeg.angle * 0.08;
+
+      // Keep feet planted horizontally under hips when on the floor
+      if (leftLeg.position.y > 470) {
+        Body.setVelocity(leftLeg, { x: leftLeg.velocity.x * 0.85, y: leftLeg.velocity.y });
       }
-    });
+      if (rightLeg.position.y > 470) {
+        Body.setVelocity(rightLeg, { x: rightLeg.velocity.x * 0.85, y: rightLeg.velocity.y });
+      }
+    }
+
+    // 4. Subtle idle breath sway when sane, manic twitches when insane
+    if (this.sanityStage === 'SANE') {
+      const idleSway = Math.sin(this.breathCycle) * 0.00018;
+      Body.applyForce(torso, torso.position, { x: idleSway, y: 0 });
+    } else if (this.sanityStage === 'INSANE') {
+      if (Math.random() < 0.28) {
+        Body.applyForce(torso, torso.position, {
+          x: (Math.random() - 0.5) * 0.0022,
+          y: (Math.random() - 0.5) * 0.0012
+        });
+      }
+    }
   }
 
-  // Automatic Force/Stress Joint Severing
+  // Automatic Force/Stress Joint Severing (Protected against premature death)
   checkJointStress(caEngine = null, synth = audioSynth) {
     this.updatePosture();
+
+    // Spawn immunity: no breaking during initial physics settling
+    if (this.spawnImmunityFrames > 0) {
+      this.spawnImmunityFrames--;
+      return;
+    }
 
     Object.entries(this.constraints).forEach(([jointName, c]) => {
       if (c.isBroken) return;
@@ -283,8 +461,9 @@ export class PlayerRagdoll {
         bodyA.velocity.y - bodyB.velocity.y
       );
 
-      const maxStretch = c.maxStretch || 18;
-      if (dist > maxStretch || vRel > 26) {
+      const maxStretch = c.maxStretch || 75;
+      // Joint breaking only triggers under extreme impact or tearing trauma
+      if ((dist > maxStretch && vRel > 25) || vRel > 65) {
         this.severJoint(jointName, caEngine, synth);
       }
     });
@@ -524,7 +703,35 @@ export class PlayerRagdoll {
       this.hurtFlashFrames--;
     }
 
-    // 2. Terraria / Stardew Eye Tracking & Emotes (Look up at falling objects)
+    // 2. Sanity behaviors and idle ticks
+    if (!this.isDead) {
+      this.insanityTimer = (this.insanityTimer || 0) + 1;
+      this.insanityAuraAngle = (this.insanityAuraAngle || 0) + 0.08;
+
+      if (this.sanityStage === 'NERVOUS') {
+        if (this.insanityTimer % 35 === 0) {
+          this.eyeWander = {
+            x: (Math.random() - 0.5) * 3,
+            y: (Math.random() - 0.5) * 2
+          };
+        }
+      } else if (this.sanityStage === 'INSANE') {
+        // Periodic madness screams every 2.5 seconds
+        if (this.insanityTimer % 150 === 0 && this.parts.head) {
+          const screams = ["HEHEHE!", "TOO LATE!", "THE PAW DEMANDS IT!", "I CAN'T LOOK!"];
+          vfxSystem.spawnFloatingText(
+            this.parts.head.position.x,
+            this.parts.head.position.y - 30,
+            screams[Math.floor(Math.random() * screams.length)],
+            '#c084fc',
+            14
+          );
+          if (Math.random() < 0.4) audioSynth.playInsaneLaugh();
+        }
+      }
+    }
+
+    // 3. Terraria / Stardew Eye Tracking & Dread from Falling Danger
     if (dangerPos && this.parts.head && !this.isDead && this.state !== 'SQUASHED') {
       const headX = this.parts.head.position.x;
       const headY = this.parts.head.position.y;
@@ -532,8 +739,16 @@ export class PlayerRagdoll {
       const dy = dangerPos.y - headY;
       const dist = Math.hypot(dx, dy);
 
-      if (dy < 0 && Math.abs(dx) < 160) {
+      if (dy < 0 && Math.abs(dx) < 220) {
         this.isLookingUp = true;
+
+        // Approaching danger drains sanity rapidly
+        if (dist < 320) {
+          this.reduceSanity(0.4, 'DANGER_APPROACHING');
+        }
+        if (dist < 180) {
+          this.reduceSanity(0.9, 'DANGER_IMMINENT');
+        }
 
         if (dist < 260 && !this.hasAlerted) {
           this.hasAlerted = true;
@@ -556,7 +771,7 @@ export class PlayerRagdoll {
       }
     }
 
-    // 3. Natural Stress Severing & Posture Update
+    // 4. Natural Stress Severing & Upright Posture Update
     this.checkJointStress(cellularGrid, audioSynth);
 
     // 4. Stump Blood Spurts
@@ -720,20 +935,15 @@ export class PlayerRagdoll {
       ctx.fillStyle = c.hair;
       ctx.fillRect(-12, -12, 24, 6);
 
-      // Eyes & Expression
-      const speed = Math.hypot(p.head.velocity.x, p.head.velocity.y);
-      const isPanicking = speed > 4 || this.constraints.neck?.isBroken || this.state === 'PANIC' || this.state === 'BURNING';
-
+      // Eyes & Expression Rendering based on Health and Sanity Stage
       if (this.isDead || this.constraints.neck?.isBroken || this.state === 'SQUASHED') {
-        // Dead or Squashed X eyes
+        // Dead or Squashed X_X eyes
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
         [[-6, -2], [6, -2]].forEach(([ex, ey]) => {
           ctx.beginPath();
-          ctx.moveTo(ex - 3, ey - 3);
-          ctx.lineTo(ex + 3, ey + 3);
-          ctx.moveTo(ex + 3, ey - 3);
-          ctx.lineTo(ex - 3, ey + 3);
+          ctx.moveTo(ex - 3, ey - 3); ctx.lineTo(ex + 3, ey + 3);
+          ctx.moveTo(ex + 3, ey - 3); ctx.lineTo(ex - 3, ey + 3);
           ctx.stroke();
         });
         // Squashed tongue/mouth
@@ -741,33 +951,100 @@ export class PlayerRagdoll {
         ctx.beginPath();
         ctx.arc(0, 5, 4, 0, Math.PI);
         ctx.fill();
-      } else if (this.isLookingUp) {
-        // Looking UP in terror at falling doom!
+      } else if (this.sanityStage === 'INSANE') {
+        // ========================================================
+        // STAGE 4: COMPLETE MADNESS / INSANITY
+        // ========================================================
+        // Purple Eldritch paranoia aura
+        ctx.save();
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = '#d946ef';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16 + Math.sin(this.insanityAuraAngle) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // Mismatched crazy eyes (Left: large hypnotic eye, Right: twitching pinprick)
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-6, -2, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#9333ea';
+        ctx.beginPath();
+        ctx.arc(-6, -2, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(-6 + Math.sin(this.insanityAuraAngle * 2) * 1.5, -2, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(6, -2, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(5 + (Math.random() - 0.5) * 1.5, -3 + (Math.random() - 0.5) * 1.5, 2, 2);
+
+        // Manic jagged grin with teeth
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(0, 4, 6, 0, Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-4, 4, 2, 2);
+        ctx.fillRect(0, 4, 2, 2);
+        ctx.fillRect(3, 4, 2, 2);
+      } else if (this.isLookingUp || this.sanityStage === 'PARANOID') {
+        // ========================================================
+        // STAGE 3: PARANOID / PANIC (Looking up in dread at doom)
+        // ========================================================
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(-8, -6, 6, 6);
         ctx.fillRect(2, -6, 6, 6);
-        // Pupils rolled straight to top
+        // Pupils rolled straight up
         ctx.fillStyle = '#000000';
         ctx.fillRect(-6, -6, 2.5, 2.5);
         ctx.fillRect(4, -6, 2.5, 2.5);
-        // Screaming mouth
+
+        // Sweating forehead droplet
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(-10, -6, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Screaming oval mouth
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(0, 4, 3.5, 4.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 4, 4, 5, 0, 0, Math.PI * 2);
         ctx.fill();
-      } else if (isPanicking) {
-        // Panic wide eyes
+      } else if (this.sanityStage === 'NERVOUS') {
+        // ========================================================
+        // STAGE 2: NERVOUS / UNEASY
+        // ========================================================
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(-8, -4, 5, 5);
+        ctx.fillRect(-7, -4, 5, 5);
         ctx.fillRect(3, -4, 5, 5);
+        // Darting pupils
+        const wx = this.eyeWander?.x || 0;
+        const wy = this.eyeWander?.y || 0;
         ctx.fillStyle = '#000000';
-        ctx.fillRect(-6, -3, 2, 2);
-        ctx.fillRect(5, -3, 2, 2);
-        // Screaming open mouth
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(-3, 3, 6, 6);
+        ctx.fillRect(-6 + wx, -3 + wy, 2.5, 2.5);
+        ctx.fillRect(4 + wx, -3 + wy, 2.5, 2.5);
+
+        // Uneasy wavy mouth
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-4, 4);
+        ctx.quadraticCurveTo(-1, 2, 1, 4);
+        ctx.quadraticCurveTo(3, 6, 5, 4);
+        ctx.stroke();
       } else {
-        // Normal calm eyes with animated blinking!
+        // ========================================================
+        // STAGE 1: SANE / HOPEFUL (Normal living human)
+        // ========================================================
         const isBlinking = (Math.floor(performance.now() / 140) % 24) === 0;
         if (isBlinking) {
           ctx.strokeStyle = '#000000';
@@ -780,12 +1057,45 @@ export class PlayerRagdoll {
           ctx.fillStyle = '#000000';
           ctx.fillRect(-7, -3, 3, 3);
           ctx.fillRect(4, -3, 3, 3);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(-7, -3, 1, 1);
+          ctx.fillRect(4, -3, 1, 1);
         }
+        // Peaceful curved smile
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(0, 3, 4, 0.2, Math.PI - 0.2);
         ctx.stroke();
+
+        // Rosy cheeks
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+        ctx.beginPath();
+        ctx.arc(-8, 2, 2, 0, Math.PI * 2);
+        ctx.arc(8, 2, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Miniature Sanity / Mind Bar above head when alive
+      if (!this.isDead && this.sanity < 100) {
+        const barW = 28;
+        const barH = 3.5;
+        const barY = -22;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(-barW / 2 - 1, barY - 1, barW + 2, barH + 2);
+
+        const sanityPct = Math.max(0, this.sanity / 100);
+        const fillW = Math.floor(barW * sanityPct);
+        const barColor = this.sanityStage === 'INSANE'
+          ? '#c084fc'
+          : this.sanityStage === 'PARANOID'
+          ? '#f97316'
+          : this.sanityStage === 'NERVOUS'
+          ? '#06b6d4'
+          : '#10b981';
+
+        ctx.fillStyle = barColor;
+        ctx.fillRect(-barW / 2, barY, fillW, barH);
       }
 
       // Hat Styles

@@ -9,7 +9,7 @@ import { drawPixelSprite } from '../data/themes';
 import { audioSynth } from '../engine/audioSynth';
 import { vfxSystem } from '../engine/vfxSystem';
 
-const { Engine, World, Bodies, Body, Composite, Constraint, Mouse, MouseConstraint } = Matter;
+const { Engine, World, Bodies, Body, Composite, Constraint, Mouse, MouseConstraint, Events } = Matter;
 
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 540;
@@ -50,8 +50,6 @@ export default function GameCanvas({
   const resetSandboxStage = (engine, custom) => {
     if (!engine) return;
 
-    // Trigger Stardew/Terraria Alert emote on fresh ragdoll
-    vfxSystem.spawnEmote(480, 400, 'ALERT');
     vfxSystem.debris = [];
     vfxSystem.shockwaves = [];
 
@@ -79,21 +77,12 @@ export default function GameCanvas({
       cellularGridRef.current.clear();
     }
 
-    // Remove old ragdoll parts and constraints
+    // Resurrect player ragdoll as a living, pristine human
     if (ragdollRef.current) {
-      Object.values(ragdollRef.current.parts).forEach((p) => {
-        if (p) World.remove(engine.world, p);
-      });
-      Object.values(ragdollRef.current.constraints).forEach((c) => {
-        if (c) World.remove(engine.world, c);
-      });
-      ragdollRef.current.meatChunks.forEach((chunk) => {
-        World.remove(engine.world, chunk.body);
-      });
+      ragdollRef.current.resurrect(480, 440, custom);
+    } else {
+      ragdollRef.current = new MatterRagdoll(engine.world, 480, 440, custom || {});
     }
-
-    // Spawn fresh player ragdoll at x = 480, y = 440
-    ragdollRef.current = new MatterRagdoll(engine.world, 480, 440, custom || {});
   };
 
   // Initialize Matter.js Physics Engine & 320x180 Cellular Grid
@@ -135,6 +124,41 @@ export default function GameCanvas({
       World.add(engine.world, mouseConstraint);
     }
 
+    // Collision Listener: Props impacting the human deal physical damage & trigger fatal events
+    Events.on(engine, 'collisionStart', (event) => {
+      event.pairs.forEach((pair) => {
+        const { bodyA, bodyB } = pair;
+        const isRagA = bodyA.label && bodyA.label.startsWith('ragdoll_');
+        const isRagB = bodyB.label && bodyB.label.startsWith('ragdoll_');
+
+        if (isRagA || isRagB) {
+          const other = isRagA ? bodyB : bodyA;
+          const rag = ragdollRef.current;
+          if (!rag || rag.isDead) return;
+
+          // If hit by lethal ceiling spikes
+          if (other.label === 'ceiling_spike' || other.customData?.isSpike) {
+            rag.takeDamage(100, other.position, audioSynth, cellularGridRef.current);
+            rag.severJoint('neck', cellularGridRef.current, audioSynth);
+          }
+          // If hit by falling props (e.g. 2-ton anvil, monster sandwich, car, meteor, safe)
+          else if (propsRef.current.includes(other)) {
+            const relVel = Math.hypot(
+              bodyA.velocity.x - bodyB.velocity.x,
+              bodyA.velocity.y - bodyB.velocity.y
+            );
+            if (relVel > 3.0) {
+              const impactDmg = Math.floor(Math.min(100, (other.mass || 10) * relVel * 0.12 + 25));
+              rag.takeDamage(impactDmg, other.position, audioSynth, cellularGridRef.current);
+              if (impactDmg >= 75 || relVel > 12.0) {
+                rag.squash(cellularGridRef.current, audioSynth);
+              }
+            }
+          }
+        }
+      });
+    });
+
     // Connect Choreography Runner Handlers
     choreographyRunner.handlers = {
       // 1. SPAWN_OBJECT
@@ -145,6 +169,8 @@ export default function GameCanvas({
           propsRef.current.push(body);
           World.add(engineRef.current.world, body);
         });
+        // Threat of summoned entity drains human sanity
+        ragdollRef.current?.reduceSanity(25, 'PROP_SUMMONED');
       },
 
       // 2. DESTROY_JOINT
@@ -216,6 +242,10 @@ export default function GameCanvas({
       // 7. Dialogue & Taunt
       onDialogueUpdate: (dialogue) => {
         if (onDialogueUpdate) onDialogueUpdate(dialogue);
+        // Genie's sinister mocking words erode human sanity
+        if (dialogue?.speaker && dialogue.speaker.toLowerCase().includes('genie')) {
+          ragdollRef.current?.reduceSanity(20, 'GENIE_SPEAKS');
+        }
       },
 
       // 8. Wish Outcome

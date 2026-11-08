@@ -213,6 +213,30 @@ export class VFXSystem {
     });
   }
 
+  // Divine Golden Pillar & Sparkle Burst on Human Resurrection
+  spawnResurrectionAura(x, y) {
+    // Expanding golden shockwaves
+    this.spawnShockwave(x, y + 20, 2.2, '#ffd166');
+    this.spawnShockwave(x, y + 20, 1.4, '#ffffff');
+
+    // Rising divine spark motes
+    for (let i = 0; i < 18; i++) {
+      this.dustMotes.push({
+        x: x + (Math.random() - 0.5) * 36,
+        y: y + 20 + (Math.random() - 0.5) * 20,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: -2.5 - Math.random() * 3.0,
+        radius: 2 + Math.random() * 2,
+        alpha: 0.9,
+        life: 45 + Math.floor(Math.random() * 25),
+        isEmber: true
+      });
+    }
+
+    // Bouncy Gold Floating Text
+    this.spawnFloatingText(x, y - 50, 'RESURRECTED!', '#ffd166', 17);
+  }
+
   // =========================================================================
   // 5. HIGH-SPEED ATMOSPHERIC STREAKS
   // =========================================================================
@@ -602,6 +626,15 @@ export class VFXSystem {
         ctx.font = '12px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('★', 0, 2);
+      } else if (em.type === 'INSANITY') {
+        // Swirling eldritch insanity spiral 🌀
+        ctx.fillStyle = '#a855f7';
+        ctx.shadowColor = '#d946ef';
+        ctx.shadowBlur = 6;
+        ctx.font = 'bold 13px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('@@', 0, 2);
+        ctx.shadowBlur = 0;
       }
 
       ctx.restore();

@@ -524,6 +524,77 @@ export class AudioSynth {
     this.playExplosion();
   }
 
+  // Divine Golden Resurrection Chime (C5 -> E5 -> G5 -> C6 Arpeggio)
+  playResurrectionChime() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+      gain.gain.setValueAtTime(0.001, now + idx * 0.08);
+      gain.gain.linearRampToValueAtTime(0.22, now + idx * 0.08 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.5);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.55);
+    });
+  }
+
+  // Frantic Heartbeat for Insanity / Panic
+  playHeartbeat() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+
+    // Lub-dub double thumping pulse
+    [0, 0.12].forEach((offset) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(65, now + offset);
+      osc.frequency.exponentialRampToValueAtTime(35, now + offset + 0.09);
+
+      gain.gain.setValueAtTime(0.35, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.1);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.11);
+    });
+  }
+
+  // Quick manic giggle for madness stage
+  playInsaneLaugh() {
+    this.unlock();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const notes = [440, 554, 440, 659, 880];
+
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq + (Math.random() * 40 - 20), now + idx * 0.05);
+
+      gain.gain.setValueAtTime(0.08, now + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.06);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now + idx * 0.05);
+      osc.stop(now + idx * 0.05 + 0.07);
+    });
+  }
+
   startAmbientMusic(themeId = 'djinn') {
     this.currentThemeId = themeId;
     this.stopAmbientMusic();
