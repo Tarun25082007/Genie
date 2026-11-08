@@ -17,7 +17,6 @@ const CANVAS_HEIGHT = 540;
 export default function GameCanvas({
   theme,
   settings,
-  activeTool,
   customization,
   wishNumber,
   onDialogueUpdate,
@@ -45,13 +44,6 @@ export default function GameCanvas({
     targetY: 220,
     frame: 0,
     smokeParticles: []
-  });
-
-  // Pointer state for sandbox brush
-  const pointerRef = useRef({
-    isDown: false,
-    x: 0,
-    y: 0
   });
 
   // Re-spawns player ragdoll and clears chamber props on next wish or reset
@@ -440,35 +432,7 @@ export default function GameCanvas({
         );
       }
 
-      // 5. Handle Pointer Sandbox Brush Painting
-      if (pointerRef.current.isDown && activeTool !== 'none' && cellular) {
-        const scaleX = cellular.cols / CANVAS_WIDTH;
-        const scaleY = cellular.rows / CANVAS_HEIGHT;
-        const gx = Math.floor(pointerRef.current.x * scaleX);
-        const gy = Math.floor(pointerRef.current.y * scaleY);
-
-        const toolTypeMap = {
-          blood: CELL_TYPES.BLOOD,
-          fire: CELL_TYPES.FIRE,
-          acid: CELL_TYPES.ACID,
-          ash: CELL_TYPES.ASH,
-          gold: CELL_TYPES.GOLD,
-          wall: CELL_TYPES.WALL,
-          spark: CELL_TYPES.SPARK,
-          water: CELL_TYPES.WATER,
-          lava: CELL_TYPES.LAVA,
-          oil: CELL_TYPES.OIL,
-          ice: CELL_TYPES.ICE,
-          smoke: CELL_TYPES.SMOKE,
-          sand: CELL_TYPES.SAND
-        };
-        const cType = toolTypeMap[activeTool];
-        if (cType !== undefined) {
-          cellular.spawnCircle(gx, gy, 6, cType, 8);
-        }
-      }
-
-      // 6. Update Genie Procedural Animation
+      // 5. Update Genie Procedural Animation
       const genie = genieAnimRef.current;
       genie.frame++;
       genie.targetY = 220 + Math.sin(genie.frame * 0.05) * 16;
@@ -673,7 +637,7 @@ export default function GameCanvas({
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [theme, customization, activeTool, settings]);
+  }, [theme, customization, settings]);
 
   const renderGenieEntity = (ctx, genie, th, genieCustom, currentTime = 0) => {
     ctx.save();
@@ -983,37 +947,10 @@ export default function GameCanvas({
     ctx.restore();
   };
 
-  const handlePointerDown = (e) => {
-    audioSynth.unlock();
-    const rect = matterCanvasRef.current.getBoundingClientRect();
-    const scaleX = CANVAS_WIDTH / rect.width;
-    const scaleY = CANVAS_HEIGHT / rect.height;
-
-    pointerRef.current.x = (e.clientX - rect.left) * scaleX;
-    pointerRef.current.y = (e.clientY - rect.top) * scaleY;
-    pointerRef.current.isDown = true;
-  };
-
-  const handlePointerMove = (e) => {
-    const rect = matterCanvasRef.current.getBoundingClientRect();
-    const scaleX = CANVAS_WIDTH / rect.width;
-    const scaleY = CANVAS_HEIGHT / rect.height;
-
-    pointerRef.current.x = (e.clientX - rect.left) * scaleX;
-    pointerRef.current.y = (e.clientY - rect.top) * scaleY;
-  };
-
-  const handlePointerUp = () => {
-    pointerRef.current.isDown = false;
-  };
-
   return (
     <div
       ref={containerRef}
-      onMouseDown={handlePointerDown}
-      onMouseMove={handlePointerMove}
-      onMouseUp={handlePointerUp}
-      onMouseLeave={handlePointerUp}
+      onClick={() => audioSynth.unlock()}
       className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden select-none"
     >
       <div className="relative w-full max-w-[960px] aspect-[960/540] shadow-2xl overflow-hidden border-2 border-slate-800">

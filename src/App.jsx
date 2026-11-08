@@ -17,22 +17,11 @@ import {
   RotateCcw,
   Volume2,
   VolumeX,
-  Flame,
-  Droplets,
-  Layers,
   Sparkles,
   ShieldAlert,
-  Hand,
   Skull,
   Award,
-  Zap,
-  Square,
   CheckCircle2,
-  Waves,
-  Snowflake,
-  Wind,
-  Mountain,
-  Fuel,
   X,
   Eye,
   EyeOff
@@ -52,9 +41,6 @@ export default function App() {
 
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-
-  // Sandbox Brush Tool state
-  const [activeTool, setActiveTool] = useState('none');
 
   // Dialogue & Choreography state
   const [currentDialogue, setCurrentDialogue] = useState(null);
@@ -221,29 +207,12 @@ export default function App() {
     setSurvivedWishesCount(0);
   };
 
-  const tools = [
-    { id: 'none', label: 'Grab', icon: Hand },
-    { id: 'blood', label: 'Blood', icon: Droplets, color: '#be0a19' },
-    { id: 'fire', label: 'Fire', icon: Flame, color: '#ff3c14' },
-    { id: 'acid', label: 'Acid', icon: Skull, color: '#70e000' },
-    { id: 'water', label: 'Water', icon: Waves, color: '#38bdf8' },
-    { id: 'lava', label: 'Lava', icon: Flame, color: '#f97316' },
-    { id: 'oil', label: 'Oil', icon: Fuel, color: '#64748b' },
-    { id: 'ice', label: 'Ice', icon: Snowflake, color: '#a5f3fc' },
-    { id: 'smoke', label: 'Smoke', icon: Wind, color: '#94a3b8' },
-    { id: 'sand', label: 'Sand', icon: Mountain, color: '#fde047' },
-    { id: 'ash', label: 'Ash', icon: Layers, color: '#a0a5aa' },
-    { id: 'gold', label: 'Gold', icon: Sparkles, color: '#ffd166' },
-    { id: 'spark', label: 'Spark', icon: Zap, color: '#fff064' },
-    { id: 'wall', label: 'Wall', icon: Square, color: '#64748b' }
-  ];
-
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black text-slate-100 flex flex-col font-pixel select-none">
       {/* ======================================================== */}
-      {/* TOP HUD BAR & TOOLBAR                                    */}
+      {/* TOP HUD BAR & CONTROLS                                   */}
       {/* ======================================================== */}
-      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-3 md:px-5 py-2 bg-black/60 backdrop-blur-md border-b border-slate-800">
+      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-3 md:px-5 py-2.5 bg-black/60 backdrop-blur-md border-b border-slate-800">
         {/* Title & Brand */}
         <div className="flex items-center gap-2.5">
           <div
@@ -261,36 +230,6 @@ export default function App() {
               </span>
             </h1>
           </div>
-        </div>
-
-        {/* 320x180 Sandbox Material Brush Selector */}
-        <div className="flex items-center gap-1 bg-black/60 p-1 rounded-xl border border-slate-800/80 overflow-x-auto">
-          {tools.map((t) => {
-            const Icon = t.icon;
-            const isSelected = activeTool === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => {
-                  audioSynth.playButton();
-                  setActiveTool(t.id);
-                }}
-                title={`Tool: ${t.label}`}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold transition-all ${
-                  isSelected
-                    ? 'bg-slate-800 shadow-md scale-105 border'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-                }`}
-                style={{
-                  borderColor: isSelected ? theme.chamberColors.accentHex : 'transparent',
-                  color: isSelected && t.color ? t.color : undefined
-                }}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline">{t.label}</span>
-              </button>
-            );
-          })}
         </div>
 
         {/* Action Controls (Theme, Settings, Mute, Reset) */}
@@ -357,7 +296,6 @@ export default function App() {
         <GameCanvas
           theme={theme}
           settings={settings}
-          activeTool={activeTool}
           customization={customization}
           wishNumber={wishNumber}
           onDialogueUpdate={setCurrentDialogue}
