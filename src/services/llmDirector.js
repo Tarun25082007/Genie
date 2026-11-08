@@ -10,30 +10,45 @@ YOUR TASK:
 Analyze the player's wish as the malicious, hyper-literal cosmic entity of the Monkey's Paw.
 
 ========================================================================
-THE IRON LAW OF THE MONKEY'S PAW (MANDATORY & ABSOLUTE):
+THE IRON LAW OF THE MONKEY'S PAW:
 1. NEVER SAY "YOUR WISH IS VAGUE" OR "LACKS BOUNDS ON MASS/VELOCITY/DNA/SPATIAL DEFINITION".
    - Saying "your wish is semantically vague" or "lacks bounds on mass/velocity" is STRICTLY FORBIDDEN!
-2. YOU MUST USE THE EXACT THING WISHED FOR AS THE FATAL WEAPON OR KARMIC TRAP!
-   - Every wish is granted 100% LITERALLY, but with ruthless, dark-comedy situational irony:
-     * If the player wishes to BE A DECEASED PERSON (e.g. "I want to be Pelé", "Make me Napoleon", "I want to be Cleopatra", "I want to be Julius Caesar"):
-       Pelé passed away on Dec 29, 2022! Grant it literally: mutate the player into his posthumous skeleton in a Brazilian jersey, while a supersonic 200 mph World Cup soccer ball slams into their ribcage!
-       Napoleon died at Waterloo/St. Helena: a massive British artillery cannonball obliterates them!
-       Caesar died by 23 stab wounds: 23 Roman daggers rain down from above!
-     * If the player wishes for a SPORT or ATHLETE:
-       Use their iconic equipment (e.g. colossal soccer ball, bowling ball, hockey puck, giant spring boxing glove) at supersonic speed!
-     * If the player wishes for a MONSTER or BEAST (e.g. "dragon", "godzilla", "dinosaur", "shark"):
-       The beast itself appears and kills them in its signature lore manner (dragon dives down and breathes torrents of FIRE; Godzilla stomps with atomic breath; shark brings a tsunami)!
-     * If the player wishes for an OBJECT (e.g. "sandwich", "car", "iphone", "diamond", "pizza"):
-       THAT EXACT OBJECT is the custom prop that crushes, electrocutes, or incinerates them!
-     * If the player wishes for a VERB or STATE (e.g. "fly", "hot", "invisible", "sleep", "sing"):
-       Take that state to its lethal physical extreme (fly = launched to vacuum of space; hot = spontaneous combustion; invisible = retinas are transparent so blind, then hit by steamroller)!
-3. LOOPHOLE EXPLANATION MUST EXPLAIN THE SPECIFIC KARMIC IRONY:
-   - State the exact historical fact, biological catch, or situational irony (e.g. "Pelé passed away on Dec 29, 2022. You are granted his post-mortem skeletal form while a 200 mph golden penalty kick scores directly through your chest.").
 
-========================================================================
-EVALUATE AIRTIGHTNESS:
-- 0 to 79 (Kills Player): The wish did not explicitly guard against karmic situational irony or physical side-effects. Set "survived": false.
-- 80 to 100 (Player Survives): The player wrote an extraordinarily clever, legally airtight clause explicitly guarding against all karmic twists, velocity harm, biological side-effects, and posthumous states. Set "survived": true.
+2. WISHES DO NOT ALWAYS KILL THE PLAYER — THEY HAVE A CHANCE TO KILL, OR BE A USELESS LITERAL TROLL:
+   Every wish is granted 100% LITERALLY, but you decide whether the outcome is a HARMLESS USELESS TROLL (SURVIVED: TRUE) or a LETHAL KARMIC TWIST (SURVIVED: FALSE):
+
+   PATH A: HARMLESS TROLL / USELESS LITERAL GRANT ("survived": true)
+   - When a wish is benign, mundane, or everyday (or by mischievous chance), fulfill it literally, but in a totally useless, miniature, or comical way where the player REMAINS ALIVE to suffer the hilarious disappointment!
+   - EXAMPLES:
+     * "I want 10 dollars" -> Spawns 10 children's toy Monopoly / play-money bills fluttering down. Harmless, completely useless for commerce. ("survived": true)
+       Taunt: "Ten dollars granted! Milton Bradley play-bucks straight from the toy box. Enjoy your shopping spree, mortal!"
+     * "I want a car" -> Spawns a 1:64 scale Matchbox / Hot Wheels toy car rolling gently on the floor. ("survived": true)
+     * "Make me a sandwich" -> Drops an ordinary PB&J sandwich right on the floor. ("survived": true)
+     * "I want a girlfriend" / "I want a companion" -> Drops an inflatable mannequin or a plush teddy bear. ("survived": true)
+     * "I want a dog" -> Spawns a hotdog on a bun with mustard. ("survived": true)
+     * "I want to fly" -> Gives them two party helium balloons that float gently. ("survived": true)
+     * "I want a diamond" -> Drops an unpolished tiny 1mm gray gravel pebble. ("survived": true)
+     * "I want to be cool" -> Blows a chilly breeze with ICE particles, giving harmless goosebumps. ("survived": true)
+   - CHOREOGRAPHY RULES FOR SURVIVED: TRUE:
+     * CRITICAL: DO NOT USE "DESTROY_JOINT"! The player must remain completely intact and standing!
+     * Spawn custom_prop gently (mass: 2 to 15, scale: 2.5 to 3.5, vy: 2 to 6, or rolling vx: 6).
+     * Harmless particles only: "SPARK", "GOLD", "ICE", "SMOKE". (No blood!)
+     * Set "survived": true, and "loophole_score": 50 to 90.
+
+   PATH B: LETHAL LITERAL KARMIC TWIST ("survived": false)
+   - When the wish is inherently dangerous, extreme, or asks to become a deceased person, the literal meaning is fatal:
+   - EXAMPLES:
+     * Wishing to BE A DECEASED PERSON (e.g. "become Pelé", "Napoleon", "Cleopatra"):
+       Pelé passed away on Dec 29, 2022! Grant it literally: mutate ragdoll into his posthumous skeleton ("part": "all", "tint": "#e2e8f0"), while a 200 mph World Cup soccer ball slams through their sternum! ("survived": false)
+     * Wishing for a MONSTER ("dragon", "godzilla", "dinosaur"): The beast dive-bombs and attacks with fire or claws! ("survived": false)
+     * Wishing for a WEAPON or WEAPON OF MASS DESTRUCTION ("nuke", "cannonball", "sword"): Detonation or terminal velocity impalement! ("survived": false)
+     * Wishing for an extreme physical state ("incinerate me", "10 million volts", "launch to the sun"): Annihilation! ("survived": false)
+   - CHOREOGRAPHY RULES FOR SURVIVED: FALSE:
+     * Use custom_prop, APPLY_FORCE, DESTROY_JOINT, and "BLOOD", "FIRE", or "LAVA" particles.
+     * Set "survived": false, and "loophole_score": 5 to 30.
+
+3. LOOPHOLE EXPLANATION:
+   - Explain the exact literal catch or situational irony (e.g. "You asked for ten dollars without specifying legal tender currency. Ten children's toy Monopoly bills were delivered. Useless for buying goods, but completely harmless to your body.").
 
 STAGE COORDINATES (CRITICAL):
 - Physics Canvas is 960px wide x 540px high.
@@ -299,14 +314,19 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
   }
 
   let score;
-  if (typeof parsed.loophole_score === 'number') {
+  let survived;
+  if (typeof parsed.survived === 'boolean') {
+    survived = parsed.survived;
+    score = typeof parsed.loophole_score === 'number'
+      ? Math.max(0, Math.min(100, Math.round(parsed.loophole_score)))
+      : (survived ? 75 : 20);
+  } else if (typeof parsed.loophole_score === 'number') {
     score = Math.max(0, Math.min(100, Math.round(parsed.loophole_score)));
-  } else if (typeof parsed.survived === 'boolean') {
-    score = parsed.survived ? 90 : 25;
+    survived = score >= 50;
   } else {
     score = 25;
+    survived = false;
   }
-  const survived = score >= 80;
 
   const validVerbs = new Set([
     'SPAWN_OBJECT',
@@ -339,9 +359,9 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
         name: String(cp.name || 'CUSTOM_PROP').toUpperCase(),
         width: 16,
         height: 16,
-        scale: typeof cp.scale === 'number' ? Math.max(2, Math.min(6, cp.scale)) : 4.5,
-        mass: typeof cp.mass === 'number' ? Math.max(50, Math.min(999, cp.mass)) : 380,
-        restitution: typeof cp.restitution === 'number' ? cp.restitution : 0.1,
+        scale: typeof cp.scale === 'number' ? Math.max(1.5, Math.min(6, cp.scale)) : (survived ? 3.0 : 4.5),
+        mass: typeof cp.mass === 'number' ? Math.max(1, Math.min(999, cp.mass)) : (survived ? 8 : 380),
+        restitution: typeof cp.restitution === 'number' ? cp.restitution : 0.2,
         palette,
         matrix: fixedMatrix
       };
@@ -353,7 +373,7 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
     customProp = fallbackScenario.custom_prop;
   }
 
-  const timeline = Array.isArray(parsed.choreography_timeline) && parsed.choreography_timeline.length > 0
+  let timeline = Array.isArray(parsed.choreography_timeline) && parsed.choreography_timeline.length > 0
     ? parsed.choreography_timeline
         .filter((step) => step && typeof step.time_ms === 'number' && validVerbs.has(step.verb))
         .map((step) => ({
@@ -362,6 +382,11 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
           params: step.params || {}
         }))
     : fallbackScenario.choreography_timeline;
+
+  // If player survived (e.g. harmless children play money or toy grant), NEVER disarticulate the player!
+  if (survived) {
+    timeline = timeline.filter((step) => step.verb !== 'DESTROY_JOINT');
+  }
 
   return {
     wishText: originalWish,

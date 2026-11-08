@@ -9,10 +9,13 @@ export function synthesizeTopicScenario(cleanWish) {
   const spriteDef = generateProceduralPixelSprite(category, wishLower);
   const choreography = generateTopicChoreography(category, wishLower, spriteDef);
 
+  const survived = choreography.survived ?? false;
+  const loopholeScore = choreography.loophole_score ?? (survived ? (Math.floor(Math.random() * 20) + 65) : (Math.floor(Math.random() * 20) + 10));
+
   return {
     wishText: cleanWish,
-    survived: false,
-    loophole_score: Math.floor(Math.random() * 20) + 10,
+    survived,
+    loophole_score: loopholeScore,
     genie_taunt: choreography.genie_taunt,
     loophole_explanation: choreography.loophole_explanation,
     voice_pitch: choreography.voice_pitch || 1.0,
@@ -22,7 +25,7 @@ export function synthesizeTopicScenario(cleanWish) {
 }
 
 function detectTopicCategory(text) {
-  // 1. Specific Iconic / Pop-Culture Entities
+  // 1. Specific Iconic Lethal Figures (Always Fatal Karma)
   if (text.match(/\b(pele|pelé|maradona|messi|ronaldo|soccer|football|world cup|fifa|striker|penalty)\b/)) {
     return 'PELE';
   }
@@ -48,14 +51,38 @@ function detectTopicCategory(text) {
     return 'NUKE';
   }
 
-  // 2. Thematic Categories
-  if (text.match(/\b(pizza|burger|taco|food|eat|hungry|sandwich|cake|donut|steak|sushi|cheese|coffee|beer|wine|ice cream|chocolate|bread|meal|snack|pie|soup|apple|fruit)\b/)) {
+  // 2. Harmless Useless / Children's Toy Grants (SURVIVED: TRUE)
+  // E.g. "10 dollars", "dollar", "bucks", "cents", "cash"
+  if (text.match(/\b(10 dollars|ten dollars|dollar|dollars|bucks|cent|cents|penny|pennies|allowance|pocket money|10 bucks|ten bucks|twenty bucks|5 dollars|five dollars|some cash|some money)\b/) && !text.match(/\b(million|billion|trillion|vault|crush|ton)\b/)) {
+    return 'TOY_DOLLARS';
+  }
+  if (text.match(/\b(toy car|hot wheels|matchbox|model car|tiny car|little car)\b/) || (text.match(/\b(car|sports car|ferrari|lambo|lamborghini|porsche)\b/) && !text.match(/\b(crush|crash|run over|speeding|hit me|run me over)\b/))) {
+    return 'TOY_CAR';
+  }
+  if (text.match(/\b(sandwich|make me a sandwich|snack|lunch|pb&j|peanut butter|toast|burger|donut|apple|fruit)\b/) && !text.match(/\b(crush|flatten|giant|ton|huge|massive)\b/)) {
+    return 'SANDWICH_LUNCH';
+  }
+  if (text.match(/\b(girlfriend|boyfriend|companion|hug|plush|teddy bear|teddy|mannequin)\b/)) {
+    return 'TOY_COMPANION';
+  }
+  if (text.match(/\b(fly|float|levitate|balloon|balloons)\b/) && !text.match(/\b(space|orbit|vacuum|sun|stratosphere|crush)\b/)) {
+    return 'BALLOONS_FLY';
+  }
+  if (text.match(/\b(dog|puppy|hotdog|hot dog|wiener)\b/) && !text.match(/\b(wolf|hound|cerberus|attack|bite)\b/)) {
+    return 'DOG_HOTDOG';
+  }
+  if (text.match(/\b(cool|be cool|chilly|cold|peace and quiet|quiet|breeze)\b/) && !text.match(/\b(freeze|ice age|absolute zero|subzero)\b/)) {
+    return 'COOL_BREEZE';
+  }
+
+  // 3. Heavy / Catastrophic Thematic Categories (SURVIVED: FALSE)
+  if (text.match(/\b(pizza|burger|taco|food|eat|hungry|cake|donut|steak|sushi|cheese|coffee|beer|wine|ice cream|chocolate|bread|meal|pie|soup)\b/)) {
     return 'FOOD';
   }
-  if (text.match(/\b(car|truck|bike|motorcycle|plane|airplane|jet|rocket|spaceship|boat|ship|submarine|skateboard|vehicle|ferrari|lambo|tesla|drive)\b/)) {
+  if (text.match(/\b(car|truck|bike|motorcycle|plane|airplane|jet|rocket|spaceship|boat|ship|submarine|skateboard|vehicle|drive)\b/)) {
     return 'VEHICLE';
   }
-  if (text.match(/\b(dog|cat|puppy|kitten|dinosaur|dino|t-rex|trex|monster|alien|zombie|skeleton|bear|shark|wolf|lion|tiger|bird|spider|snake|horse|pet|creature|animal|beast)\b/)) {
+  if (text.match(/\b(cat|dinosaur|dino|t-rex|trex|monster|alien|zombie|skeleton|bear|shark|wolf|lion|tiger|bird|spider|snake|horse|pet|creature|animal|beast)\b/)) {
     return 'CREATURE';
   }
   if (text.match(/\b(sword|gun|pistol|rifle|cannon|bomb|axe|knife|dagger|laser|blade|bow|arrow|spear|weapon|missile|katana|bullet|grenade)\b/)) {
@@ -73,10 +100,10 @@ function detectTopicCategory(text) {
   if (text.match(/\b(magic|potion|wand|spell|witch|wizard|demon|angel|ghost|curse|orb|crystal|god|powers|superpower)\b/)) {
     return 'MAGIC';
   }
-  if (text.match(/\b(fire|water|ice|freeze|cold|hot|burn|lightning|thunder|storm|rain|ocean|lava|acid|earth|rock|boulder)\b/)) {
+  if (text.match(/\b(fire|water|ice|freeze|hot|burn|lightning|thunder|storm|rain|ocean|lava|acid|earth|rock|boulder)\b/)) {
     return 'ELEMENT';
   }
-  if (text.match(/\b(friend|girlfriend|boyfriend|love|wife|husband|marry|date|companion|hug|kiss)\b/)) {
+  if (text.match(/\b(friend|love|wife|husband|marry|date|kiss)\b/)) {
     return 'ROMANCE';
   }
   return 'OBJECT';
@@ -87,6 +114,273 @@ function detectTopicCategory(text) {
  */
 export function generateProceduralPixelSprite(category, wishLower) {
   switch (category) {
+    case 'TOY_DOLLARS': {
+      // 16x16 Novelty Children's Play Dollar (Toy Monopoly / Play-Money Bill with "$10" badge)
+      return {
+        name: 'PROCEDURAL_CHILDREN_DOLLAR',
+        width: 16,
+        height: 16,
+        scale: 3.2,
+        mass: 4,
+        restitution: 0.15,
+        palette: {
+          '.': null,
+          'K': '#14532d', // Forest green border
+          'G': '#4ade80', // Mint green bill paper
+          'D': '#166534', // Dark green print
+          'Y': '#facc15', // Golden play-money star/smiley
+          'W': '#ffffff'  // Clean white corner numbers
+        },
+        matrix: [
+          '................',
+          '..KKKKKKKKKKKK..',
+          '.KGGGGGGGGGGGGK.',
+          'KGWGGGGGGGGGGWGK',
+          'KGGDGGDYYDGGDDGK',
+          'KGGDGDYYYYDGDDGK',
+          'KGGDGDYYYYDGDDGK',
+          'KGGDGGDYYDGGDDGK',
+          'KGGDGGDDDDGGDDGK',
+          'KGGDGGDYYDGGDDGK',
+          'KGWGGGGGGGGGGWGK',
+          '.KGGGGGGGGGGGGK.',
+          '..KKKKKKKKKKKK..',
+          '................',
+          '................',
+          '................'
+        ]
+      };
+    }
+
+    case 'TOY_CAR': {
+      // 16x16 Die-Cast 1:64 Miniature Matchbox Toy Car
+      return {
+        name: 'PROCEDURAL_TOY_CAR',
+        width: 16,
+        height: 16,
+        scale: 2.8,
+        mass: 5,
+        restitution: 0.4,
+        palette: {
+          '.': null,
+          'K': '#0f172a', // Chassis outline
+          'R': '#ef4444', // Bright red toy lacquer
+          'C': '#38bdf8', // Tiny plastic windshield
+          'W': '#ffffff', // Headlight
+          'T': '#1e293b', // Toy rubber tire
+          'H': '#94a3b8'  // Hubcap
+        },
+        matrix: [
+          '................',
+          '................',
+          '......KKKKKK....',
+          '.....KCCCCCCK...',
+          '....KCCCCCCCCK..',
+          '..KKKRRRRRRRRKK.',
+          '.KRRRRRRRRRRRRRK',
+          'KRRRRRRRRRRRRRRK',
+          'KRRRRRRRRRRRRRRK',
+          'KWRRRRRRRRRRRRRK',
+          '.KKTTKKKKKKTTKK.',
+          '..KTHK....KTHK..',
+          '...TT......TT...',
+          '................',
+          '................',
+          '................'
+        ]
+      };
+    }
+
+    case 'SANDWICH_LUNCH': {
+      // 16x16 Triangle Sandwich with crust, lettuce, cheese, and tomato
+      return {
+        name: 'PROCEDURAL_MINI_SANDWICH',
+        width: 16,
+        height: 16,
+        scale: 3.0,
+        mass: 3,
+        restitution: 0.1,
+        palette: {
+          '.': null,
+          'K': '#78350f', // Toasted crust outline
+          'B': '#d97706', // Golden bread crust
+          'W': '#fef3c7', // Soft white bread crumb
+          'G': '#22c55e', // Crisp lettuce leaf
+          'R': '#ef4444', // Juicy tomato slice
+          'Y': '#facc15'  // Cheddar cheese corner
+        },
+        matrix: [
+          '................',
+          '................',
+          '................',
+          '.......KKKKKK...',
+          '.....KKBBBBBBK..',
+          '....KWWWWWWWWK..',
+          '...KGGGGGGGGGK..',
+          '..KRRRRRRRRRRK..',
+          '.KYYYYYYYYYYYK..',
+          'KWWWWWWWWWWWWK..',
+          '.KBBBBBBBBBBK...',
+          '..KKKKKKKKKK....',
+          '................',
+          '................',
+          '................',
+          '................'
+        ]
+      };
+    }
+
+    case 'TOY_COMPANION': {
+      // 16x16 Stuffed Plush Teddy Bear
+      return {
+        name: 'PROCEDURAL_PLUSH_TEDDY',
+        width: 16,
+        height: 16,
+        scale: 3.2,
+        mass: 6,
+        restitution: 0.25,
+        palette: {
+          '.': null,
+          'K': '#451a03', // Teddy fur border
+          'B': '#92400e', // Soft brown fur
+          'b': '#b45309', // Light fur tummy
+          'E': '#0f172a', // Button eye
+          'N': '#1c1917', // Button nose
+          'R': '#e11d48'  // Heart bow
+        },
+        matrix: [
+          '..KK......KK....',
+          '.KBBK....KBBK...',
+          '.KBBKKKKKKBBK...',
+          '..KBBBBBBBBK....',
+          '..KBEKBBKEBK....',
+          '..KBBBBNBBBK....',
+          '...KBBBBBBK.....',
+          '....KRRRRK......',
+          '..KKBBBBBBKK....',
+          '.KBBBbbbBBBBK...',
+          '.KBBBbbbBBBBK...',
+          '..KKBBBBBBKK....',
+          '...KBB..BBK.....',
+          '...KBB..BBK.....',
+          '...KK....KK.....',
+          '................'
+        ]
+      };
+    }
+
+    case 'BALLOONS_FLY': {
+      // 16x16 Party Helium Balloons
+      return {
+        name: 'PROCEDURAL_PARTY_BALLOONS',
+        width: 16,
+        height: 16,
+        scale: 3.2,
+        mass: 1,
+        restitution: 0.3,
+        palette: {
+          '.': null,
+          'R': '#ef4444', // Red balloon
+          'B': '#3b82f6', // Blue balloon
+          'Y': '#eab308', // Yellow balloon
+          'W': '#ffffff', // Highlight shine
+          'S': '#94a3b8'  // String
+        },
+        matrix: [
+          '....RRRR...BBBB.',
+          '...RWWWRR.BWWWBB',
+          '..RRRRRRR.BBBBBB',
+          '..RRRRRRR.BBBBBB',
+          '..RRRRRRR..BBBB.',
+          '...RR.YYY...BB..',
+          '....YYWWYY..S...',
+          '...YYYYYYYY.S...',
+          '...YYYYYYYY.S...',
+          '....YYYYYY..S...',
+          '.....YY.S..S....',
+          '......S.S.S.....',
+          '.......S.S......',
+          '........S.......',
+          '........S.......',
+          '................'
+        ]
+      };
+    }
+
+    case 'DOG_HOTDOG': {
+      // 16x16 Hot Dog in Bun with Mustard
+      return {
+        name: 'PROCEDURAL_HOTDOG',
+        width: 16,
+        height: 16,
+        scale: 3.0,
+        mass: 3,
+        restitution: 0.2,
+        palette: {
+          '.': null,
+          'K': '#451a03', // Crust outline
+          'B': '#d97706', // Warm golden bun
+          'b': '#fde68a', // Soft inner bun
+          'R': '#dc2626', // Red grilled sausage
+          'Y': '#facc15'  // Zesty yellow mustard
+        },
+        matrix: [
+          '................',
+          '................',
+          '......KKKKKK....',
+          '....KKBBBBBBKK..',
+          '...KBBBbbbbBBBKK',
+          '..KRRRRRRRRRRRRK',
+          '.KRRRYRYYYRYRRRK',
+          'KRRRRYRRYYRRYRRK',
+          'KRRRRYRRYYRRYRRK',
+          '.KRRRYRYYYRYRRRK',
+          '..KRRRRRRRRRRRRK',
+          '...KBBBbbbbBBBKK',
+          '....KKBBBBBBKK..',
+          '......KKKKKK....',
+          '................',
+          '................'
+        ]
+      };
+    }
+
+    case 'COOL_BREEZE': {
+      // 16x16 Delicate Frost Crystal Snowflake
+      return {
+        name: 'PROCEDURAL_SNOWFLAKE',
+        width: 16,
+        height: 16,
+        scale: 3.0,
+        mass: 1,
+        restitution: 0.1,
+        palette: {
+          '.': null,
+          'C': '#38bdf8', // Cyan frost
+          'c': '#7dd3fc', // Light frost
+          'W': '#ffffff'  // Crystal core
+        },
+        matrix: [
+          '.......WW.......',
+          '..C....WW....C..',
+          '...C...WW...C...',
+          '....Cc.WW.cC....',
+          '.....CcWWcC.....',
+          '..CCCCcWWcCCCC..',
+          '..WWWWWWWWWWWW..',
+          'WWWWWWWWWWWWWWWW',
+          'WWWWWWWWWWWWWWWW',
+          '..WWWWWWWWWWWW..',
+          '..CCCCcWWcCCCC..',
+          '.....CcWWcC.....',
+          '....Cc.WW.cC....',
+          '...C...WW...C...',
+          '..C....WW....C..',
+          '.......WW.......'
+        ]
+      };
+    }
+
     case 'PELE': {
       // Golden Classic World Cup Soccer Ball (16x16 Hex-stitched leather Telstar with golden trophy accents)
       return {
@@ -721,6 +1015,106 @@ export function generateProceduralPixelSprite(category, wishLower) {
  */
 function generateTopicChoreography(category, wishLower, spriteDef) {
   switch (category) {
+    case 'TOY_DOLLARS':
+      return {
+        survived: true,
+        loophole_score: 65,
+        genie_taunt: 'You asked for ten dollars, but neglected to specify legal tender of any sovereign nation! Behold: ten Milton Bradley play-bucks straight from the toy box! Spend them wisely, mortal!',
+        loophole_explanation: 'Literal fulfillment: Ten dollars granted in children’s toy play currency. Completely non-negotiable for commercial transactions, but 100% harmless to your mortal shell. You survive to ponder your financial choices.',
+        voice_pitch: 1.25,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 5, duration_ms: 800 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 120, vx: 0, vy: 4, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 450, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 480, y: 240, count: 80, spread: 35 } },
+          { time_ms: 600, verb: 'EMIT_PARTICLES', params: { type: 'GOLD', x: 480, y: 320, count: 60, spread: 25 } }
+        ]
+      };
+
+    case 'TOY_CAR':
+      return {
+        survived: true,
+        loophole_score: 70,
+        genie_taunt: 'A high-performance sports car delivered directly to your coordinates! 1:64 scale die-cast zinc alloy, complete with free-rolling axles!',
+        loophole_explanation: 'Literal fulfillment: You asked for a car without specifying automotive dimensions. A miniature die-cast toy car has been delivered to your feet. Difficult to commute with, but completely non-lethal.',
+        voice_pitch: 1.2,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 5, duration_ms: 700 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 380, y: 440, vx: 8, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 350, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 420, y: 480, count: 50, spread: 20 } }
+        ]
+      };
+
+    case 'SANDWICH_LUNCH':
+      return {
+        survived: true,
+        loophole_score: 75,
+        genie_taunt: 'A freshly assembled culinary creation has materialized upon the dungeon floor! Mind the dust, mortal.',
+        loophole_explanation: 'Literal fulfillment: Food manifested as requested. Delivered onto the arena floor without a plate or napkins. Edible, slightly dusty, and completely non-lethal.',
+        voice_pitch: 1.1,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 5, duration_ms: 700 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 300, vx: 0, vy: 4, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 400, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 480, y: 440, count: 40, spread: 20 } }
+        ]
+      };
+
+    case 'TOY_COMPANION':
+      return {
+        survived: true,
+        loophole_score: 80,
+        genie_taunt: 'A faithful companion has arrived! Soft, plush, hypoallergenic, and will never break your heart!',
+        loophole_explanation: 'Literal fulfillment: You asked for companionship without specifying a living human being. A 100% cotton plush teddy bear has been assigned as your life partner.',
+        voice_pitch: 1.3,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 5, duration_ms: 700 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 440, y: 350, vx: 2, vy: 4, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 450, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 440, y: 440, count: 60, spread: 25 } }
+        ]
+      };
+
+    case 'BALLOONS_FLY':
+      return {
+        survived: true,
+        loophole_score: 72,
+        genie_taunt: 'You wished to fly? Grasp these three party balloons and savor the 0.04 ounces of buoyant helium lift!',
+        loophole_explanation: 'Literal fulfillment: Aerodynamic flight apparatus delivered in the form of three rubber birthday balloons. Insufficient to lift your mortal mass, but completely harmless.',
+        voice_pitch: 1.25,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 5, duration_ms: 700 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 250, vx: 0, vy: -1, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 450, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 480, y: 300, count: 50, spread: 25 } }
+        ]
+      };
+
+    case 'DOG_HOTDOG':
+      return {
+        survived: true,
+        loophole_score: 68,
+        genie_taunt: 'A piping-hot frankfurter on a sesame bun with zesty mustard! What, were you expecting a barking canine?',
+        loophole_explanation: 'Literal fulfillment: You asked for a dog. A culinary hot dog was delivered. Delicious, high in sodium, and entirely non-fatal.',
+        voice_pitch: 1.2,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 5, duration_ms: 700 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 320, vx: 0, vy: 4, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 400, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 480, y: 440, count: 40, spread: 20 } }
+        ]
+      };
+
+    case 'COOL_BREEZE':
+      return {
+        survived: true,
+        loophole_score: 74,
+        genie_taunt: 'The ambient room temperature drops by 3 degrees. You are now perceptibly cooler. You are welcome.',
+        loophole_explanation: 'Literal fulfillment: Requested temperature reduction applied via gentle micro-climate breeze. Harmless goosebumps achieved.',
+        voice_pitch: 1.15,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 5, duration_ms: 700 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 220, vx: 0, vy: 2, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 350, verb: 'EMIT_PARTICLES', params: { type: 'ICE', x: 480, y: 350, count: 120, spread: 50 } },
+          { time_ms: 500, verb: 'EMIT_PARTICLES', params: { type: 'SMOKE', x: 480, y: 350, count: 60, spread: 45 } }
+        ]
+      };
+
     case 'PELE':
       return {
         genie_taunt: 'You asked to become Pelé? O Rei has been at rest in immortal glory since December 2022! Your wish is granted: receive his post-mortem skeletal form as a 200 mph World Cup volley scores through your sternum!',
@@ -974,19 +1368,39 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
         ]
       };
 
-    default:
-      return {
-        genie_taunt: `Your wish for "${wishLower}" has been materialized in dense physical matter. Prepare for immediate kinetic delivery!`,
-        loophole_explanation: `Your exact wish for "${wishLower}" materialized in solid, ultra-dense form directly on your forehead with catastrophic kinetic momentum.`,
-        voice_pitch: 1.0,
-        timeline: [
-          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 8, duration_ms: 700 } },
-          { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 70, vx: 0, vy: 25, mass: spriteDef.mass, scale: spriteDef.scale } },
-          { time_ms: 560, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 28, duration_ms: 850 } },
-          { time_ms: 580, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
-          { time_ms: 600, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 300 } },
-          { time_ms: 630, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 350, spread: 45 } }
-        ]
-      };
+    default: {
+      // 50% chance of a harmless comedic useless toy delivery (SURVIVED) vs kinetic impact (DIED)
+      const isHarmless = (wishLower.length + wishLower.charCodeAt(0)) % 2 === 0;
+      if (isHarmless) {
+        return {
+          survived: true,
+          loophole_score: 70,
+          genie_taunt: `Your wish for "${wishLower}" has been fulfilled literally as a novelty souvenir! Behold its completely useless splendor!`,
+          loophole_explanation: `Literal fulfillment: Granted in miniature decorative plastic novelty format. Completely useless, but your mortal vessel survives unharmed to reflect upon your phrasing!`,
+          voice_pitch: 1.2,
+          timeline: [
+            { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 5, duration_ms: 700 } },
+            { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 320, vx: 0, vy: 4, mass: 5, scale: 3.2 } },
+            { time_ms: 450, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 480, y: 440, count: 60, spread: 30 } }
+          ]
+        };
+      } else {
+        return {
+          survived: false,
+          loophole_score: 18,
+          genie_taunt: `Your wish for "${wishLower}" has been materialized in dense physical matter. Prepare for immediate kinetic delivery!`,
+          loophole_explanation: `Your exact wish for "${wishLower}" materialized in solid, ultra-dense form directly on your forehead with catastrophic kinetic momentum.`,
+          voice_pitch: 1.0,
+          timeline: [
+            { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 8, duration_ms: 700 } },
+            { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 70, vx: 0, vy: 25, mass: spriteDef.mass, scale: spriteDef.scale } },
+            { time_ms: 560, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 28, duration_ms: 850 } },
+            { time_ms: 580, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
+            { time_ms: 600, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 300 } },
+            { time_ms: 630, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 350, spread: 45 } }
+          ]
+        };
+      }
+    }
   }
 }

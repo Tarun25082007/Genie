@@ -440,7 +440,9 @@ export default function App() {
                     {theme.role}
                   </span>
                   <h2 className="text-base md:text-lg font-bold text-slate-100 mt-1 uppercase">
-                    {activeCertificate.survived ? 'LOOPHOLE-FREE WISH! YOU SURVIVED!' : 'WISH GRANTED LITERALLY — YOU DIED'}
+                    {activeCertificate.survived
+                      ? (activeCertificate.loophole_score >= 80 ? 'AIRTIGHT WISH — YOU SURVIVED!' : 'WISH GRANTED LITERALLY — YOU SURVIVED!')
+                      : 'WISH GRANTED LITERALLY — YOU DIED'}
                   </h2>
                 </div>
 
@@ -468,7 +470,7 @@ export default function App() {
                         VESSEL STATUS:
                       </span>
                       <span className={`font-bold text-xs ${activeCertificate.survived ? 'text-emerald-300' : 'text-amber-300'}`}>
-                        {activeCertificate.survived ? 'ALIVE & INTACT' : 'DISARTICULATED'}
+                        {activeCertificate.survived ? (activeCertificate.loophole_score >= 80 ? 'ALIVE & TRIUMPHANT' : 'ALIVE & DUPED') : 'DISARTICULATED'}
                       </span>
                     </div>
                   </div>
