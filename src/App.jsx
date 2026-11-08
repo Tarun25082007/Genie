@@ -159,6 +159,15 @@ export default function App() {
       );
 
       if (scenario) {
+        if (scenario.from_cache) {
+          vfxSystem.spawnFloatingText(480, 360, '⚡ CACHE HIT!', '#38bdf8', 16);
+          setCurrentDialogue((prev) => ({
+            ...prev,
+            loopholeExplanation: `⚡ [CACHED WISH] Retrieved instantly from persistent local cache (saved from ${scenario.cache_source || 'previous LLM run'})`
+          }));
+        } else {
+          vfxSystem.spawnFloatingText(480, 360, '🧠 LLM GENERATED!', '#a855f7', 16);
+        }
         choreographyRunner.startScenario(scenario);
       } else {
         setIsExecuting(false);
@@ -448,11 +457,22 @@ export default function App() {
 
                 {/* Certificate Details */}
                 <div className="space-y-2.5 text-xs font-pixel">
-                  <div className="p-2.5 rounded-lg bg-black/40 border border-slate-800">
-                    <span className="text-slate-400 uppercase text-[10px] block font-bold">WISH COVENANT:</span>
-                    <span className="text-sm font-bold text-amber-300">
-                      "{activeCertificate.wishText}"
-                    </span>
+                  <div className="p-2.5 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-400 uppercase text-[10px] block font-bold">WISH COVENANT:</span>
+                      <span className="text-sm font-bold text-amber-300">
+                        "{activeCertificate.wishText}"
+                      </span>
+                    </div>
+                    {activeCertificate.from_cache ? (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold shrink-0">
+                        ⚡ CACHED
+                      </span>
+                    ) : (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold shrink-0">
+                        🧠 LOCAL LLM
+                      </span>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">

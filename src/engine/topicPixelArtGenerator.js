@@ -971,43 +971,98 @@ export function generateProceduralPixelSprite(category, wishLower) {
     }
 
     default: {
-      // Universal Mythic Relic / Heavy Monolith
-      return {
-        name: 'PROCEDURAL_MYTHIC_TOTEM',
-        width: 16,
-        height: 16,
-        scale: 4.5,
-        mass: 400,
-        restitution: 0.05,
-        palette: {
-          '.': null,
-          'K': '#1a1423', // Obsidian rune outline
-          'S': '#372549', // Dark runestone
-          'P': '#774c60', // Purple amethyst vein
-          'G': '#ffd166', // Golden glyph inlay
-          'W': '#ffffff'  // Glyph glow
-        },
-        matrix: [
-          '....KKKKKKKK....',
-          '...KSSSSSSSSK...',
-          '..KSSGGWWGGSSK..',
-          '.KSSGGWWWWGGSSK.',
-          '.KSGGWGGGGWGGSSK',
-          'KSGGWGGGGGGWGGSS',
-          'KSGGWGGGGGGWGGSS',
-          'KSSGGWWWWWWGGSSK',
-          'KSSGGWWWWWWGGSSK',
-          'KSGGWGGGGGGWGGSS',
-          'KSGGWGGGGGGWGGSS',
-          '.KSGGWGGGGWGGSSK',
-          '.KSSGGWWWWGGSSK.',
-          '..KSSGGWWGGSSK..',
-          '...KSSSSSSSSK...',
-          '....KKKKKKKK....'
-        ]
-      };
+      return generateDynamicPixelSprite(wishLower);
     }
   }
+}
+
+/**
+ * Procedurally generates a custom 16x16 pixel sprite for ANY arbitrary wish text dynamically
+ */
+export function generateDynamicPixelSprite(wishLower) {
+  let hash = 0;
+  for (let i = 0; i < wishLower.length; i++) {
+    hash = (hash * 31 + wishLower.charCodeAt(i)) >>> 0;
+  }
+
+  // Pick semantic palette based on topic or deterministic hash
+  let baseColor = '#f59e0b';
+  let accentColor = '#ffd166';
+  let darkColor = '#1c1917';
+  let highlightColor = '#ffffff';
+
+  if (wishLower.match(/\b(fire|flame|red|lava|burn|dragon|heat|sun|inferno)\b/)) {
+    baseColor = '#dc2626'; accentColor = '#ff6b35'; darkColor = '#450a0a'; highlightColor = '#fef08a';
+  } else if (wishLower.match(/\b(ice|cold|water|blue|ocean|frost|freeze|sky|diamond|crystal)\b/)) {
+    baseColor = '#0284c7'; accentColor = '#38bdf8'; darkColor = '#0c4a6e'; highlightColor = '#ffffff';
+  } else if (wishLower.match(/\b(nature|green|plant|earth|leaf|tree|wood|food|apple)\b/)) {
+    baseColor = '#16a34a'; accentColor = '#4ade80'; darkColor = '#14532d'; highlightColor = '#fef08a';
+  } else if (wishLower.match(/\b(gold|money|rich|dollar|cash|wealth|treasure|coin|yellow)\b/)) {
+    baseColor = '#d97706'; accentColor = '#facc15'; darkColor = '#78350f'; highlightColor = '#fef3c7';
+  } else if (wishLower.match(/\b(magic|dark|shadow|void|cosmic|space|purple|alien)\b/)) {
+    baseColor = '#9333ea'; accentColor = '#c084fc'; darkColor = '#3b0764'; highlightColor = '#f5d0fe';
+  } else if (wishLower.match(/\b(metal|steel|iron|tech|robot|cyber|sword|blade|gun|car)\b/)) {
+    baseColor = '#475569'; accentColor = '#94a3b8'; darkColor = '#0f172a'; highlightColor = '#f8fafc';
+  } else {
+    const hues = [
+      { b: '#ec4899', a: '#f472b6', d: '#831843' },
+      { b: '#06b6d4', a: '#22d3ee', d: '#164e63' },
+      { b: '#84cc16', a: '#a3e635', d: '#365314' },
+      { b: '#e11d48', a: '#fb7185', d: '#881337' },
+      { b: '#d97706', a: '#fbbf24', d: '#78350f' },
+      { b: '#7c3aed', a: '#a78bfa', d: '#4c1d95' }
+    ];
+    const picked = hues[hash % hues.length];
+    baseColor = picked.b;
+    accentColor = picked.a;
+    darkColor = picked.d;
+  }
+
+  // Clean entity name from wish
+  const entityName = wishLower
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .slice(-2)
+    .join('_')
+    .toUpperCase() || 'CUSTOM_PROP';
+
+  // Contoured item silhouette with border, core, and glint
+  const matrix = [
+    '................',
+    '....KKKKKKKK....',
+    '...KAAAAAAAAK...',
+    '..KAABBBBBBAAK..',
+    '.KABBBBBBBBBBAK.',
+    '.KABBWWBBBBABAK.',
+    'KABBWAAWBBBBABAK',
+    'KABBWAAWBBBBABAK',
+    'KABBBWWBBBBABAAK',
+    'KABBBBBBBBBBAAAK',
+    '.KABBBBBBBBAAAK.',
+    '.KAABBBBBBAAAK..',
+    '..KAAAAAAAAAK...',
+    '...KAAAAAAAK....',
+    '....KKKKKKKK....',
+    '................'
+  ];
+
+  return {
+    name: `PROCEDURAL_${entityName}`,
+    width: 16,
+    height: 16,
+    scale: 3.5,
+    mass: 12,
+    restitution: 0.25,
+    palette: {
+      '.': null,
+      'K': darkColor,
+      'A': baseColor,
+      'B': accentColor,
+      'W': highlightColor
+    },
+    matrix
+  };
 }
 
 /**

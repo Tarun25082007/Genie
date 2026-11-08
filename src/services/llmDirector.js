@@ -1,5 +1,6 @@
 // Multi-Provider LLM Director Router + Strict Schema Sanitizer & System Prompt Template
 import { synthesizeTopicScenario, generateProceduralPixelSprite } from '../engine/topicPixelArtGenerator.js';
+import { getCachedWish, saveCachedWish } from './wishCache.js';
 
 export const SYSTEM_PROMPT_TEMPLATE = `You are the malicious, hyper-literal cosmic entity governing the 2D physics sandbox game "GENIE".
 CURRENT PERSONA: {{THEME_NAME}} ({{THEME_ROLE}})
@@ -143,6 +144,13 @@ export async function interpretWishWithDirector(
   const cleanWish = wishText.trim();
   if (!cleanWish) return null;
 
+  // 1. FAST PATH: Check persistent local wish cache first!
+  const cached = getCachedWish(cleanWish);
+  if (cached) {
+    console.log(`[WishCache] Instant cache hit for "${cleanWish}" (Source: ${cached.cache_source || 'cached'})`);
+    return cached;
+  }
+
   const isOllama = provider === 'ollama' || provider === 'ollama_strong' || provider === 'ollama_weak';
 
   const resolvedApiKey = credentials?.apiKey || (
@@ -154,7 +162,9 @@ export async function interpretWishWithDirector(
   ) || '';
 
   if (provider === 'mock' || (!isOllama && !resolvedApiKey)) {
-    return synthesizeTopicScenario(cleanWish);
+    const procedural = synthesizeTopicScenario(cleanWish);
+    saveCachedWish(cleanWish, procedural, 'procedural');
+    return procedural;
   }
 
   const systemPrompt = populateSystemPrompt(
@@ -184,10 +194,14 @@ export async function interpretWishWithDirector(
     }
 
     const sanitized = sanitizeDirectorSchema(rawResponse, cleanWish);
+    // 2. Cache the newly generated wish scenario for instant future re-use!
+    saveCachedWish(cleanWish, sanitized, isOllama ? 'local_llm' : provider);
     return sanitized;
   } catch (err) {
-    console.warn(`Director provider "${provider}" failed. Falling back to topic procedural synthesis:`, err);
-    return synthesizeTopicScenario(cleanWish);
+    console.warn(`Director provider "${provider}" failed. Falling back to dynamic procedural synthesis:`, err);
+    const fallback = synthesizeTopicScenario(cleanWish);
+    saveCachedWish(cleanWish, fallback, 'local_llm_fallback');
+    return fallback;
   }
 }
 
