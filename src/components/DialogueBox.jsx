@@ -32,12 +32,16 @@ export default function DialogueBox({ dialogue, theme, onDismiss, isExecuting = 
   const survived = dialogue?.survived ?? (loopholeScore >= 80);
   const voicePitch = dialogue?.voicePitch || 1.0;
 
-  // Collapse legal breakdown during active execution to prevent obscuring the arena
+  // Auto-collapse and minimize dialogue during active choreography execution
+  // so the player gets a 100% unobstructed view of the physics slapstick and animations
   useEffect(() => {
     if (isExecuting) {
       setShowLegalBreakdown(false);
+      setIsMinimized(true);
+    } else if (dialogue) {
+      setIsMinimized(false);
     }
-  }, [isExecuting]);
+  }, [isExecuting, dialogue]);
 
   useEffect(() => {
     if (!fullText) {
@@ -96,12 +100,14 @@ export default function DialogueBox({ dialogue, theme, onDismiss, isExecuting = 
     ? '#ef4444'
     : '#f59e0b';
 
-  // Coordinate classes based on user position preference
-  const positionClasses = {
-    'top-right': 'top-14 right-3 md:right-6 w-11/12 max-w-md lg:max-w-lg',
-    'top-center': 'top-14 left-1/2 -translate-x-1/2 w-11/12 max-w-xl',
-    'bottom': 'bottom-24 left-1/2 -translate-x-1/2 w-11/12 max-w-xl'
-  }[positionMode] || 'top-14 right-3 md:right-6 w-11/12 max-w-md lg:max-w-lg';
+  // Coordinate classes based on user position preference (minimized pill always docks top-right to preserve viewport)
+  const positionClasses = isMinimized
+    ? 'top-14 right-3 md:right-6 max-w-sm md:max-w-md'
+    : ({
+        'top-right': 'top-14 right-3 md:right-6 w-11/12 max-w-md lg:max-w-lg',
+        'top-center': 'top-14 left-1/2 -translate-x-1/2 w-11/12 max-w-xl',
+        'bottom': 'bottom-24 left-1/2 -translate-x-1/2 w-11/12 max-w-xl'
+      }[positionMode] || 'top-14 right-3 md:right-6 w-11/12 max-w-md lg:max-w-lg');
 
   // Minimized Compact Pill Mode
   if (isMinimized) {
