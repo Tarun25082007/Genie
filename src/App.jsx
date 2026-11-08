@@ -51,23 +51,33 @@ export default function App() {
   const [survivedWishesCount, setSurvivedWishesCount] = useState(0);
 
   // Settings state
-  const [settings, setSettings] = useState(() => ({
-    masterVolume: 0.7,
-    sfxVolume: 0.8,
-    ambientVolume: 0.3,
-    isMuted: false,
-    gravity: 1.0,
-    provider: localStorage.getItem('genie_provider') || 'mock',
-    credentials: {
-      apiKey: localStorage.getItem('genie_apiKey') || (
-        (localStorage.getItem('genie_provider') === 'gemini'
-          ? import.meta.env?.VITE_GEMINI_API_KEY
-          : import.meta.env?.VITE_GROQ_API_KEY) || ''
-      ),
-      endpoint: localStorage.getItem('genie_endpoint') || import.meta.env?.VITE_OLLAMA_ENDPOINT || 'http://localhost:11434',
-      model: localStorage.getItem('genie_model') || import.meta.env?.VITE_OLLAMA_MODEL || ''
+  const [settings, setSettings] = useState(() => {
+    let savedProvider = localStorage.getItem('genie_provider');
+    if (!savedProvider || savedProvider === 'mock' || savedProvider === 'ollama') {
+      savedProvider = 'ollama_strong';
+      localStorage.setItem('genie_provider', 'ollama_strong');
     }
-  }));
+
+    return {
+      masterVolume: 0.7,
+      sfxVolume: 0.8,
+      ambientVolume: 0.3,
+      isMuted: false,
+      gravity: 1.0,
+      provider: savedProvider,
+      credentials: {
+        apiKey: localStorage.getItem('genie_apiKey') || (
+          (savedProvider === 'gemini'
+            ? (localStorage.getItem('genie_geminiApiKey') || import.meta.env?.VITE_GEMINI_API_KEY)
+            : (localStorage.getItem('genie_groqApiKey') || import.meta.env?.VITE_GROQ_API_KEY)) || ''
+        ),
+        endpoint: localStorage.getItem('genie_endpoint') || import.meta.env?.VITE_OLLAMA_ENDPOINT || 'http://localhost:11434',
+        model: localStorage.getItem('genie_model') || import.meta.env?.VITE_OLLAMA_MODEL || '',
+        ollamaStrongModel: localStorage.getItem('genie_ollamaStrongModel') || import.meta.env?.VITE_OLLAMA_STRONG_MODEL || 'llama3.3',
+        ollamaWeakModel: localStorage.getItem('genie_ollamaWeakModel') || import.meta.env?.VITE_OLLAMA_WEAK_MODEL || 'llama3.2'
+      }
+    };
+  });
 
   const [themes, setThemes] = useState(() => getAvailableThemes());
   const theme = themes[currentThemeId] || themes.djinn_classic || THEME_SETS.djinn_classic;

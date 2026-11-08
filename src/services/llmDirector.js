@@ -66,13 +66,15 @@ export function populateSystemPrompt(theme, wishNumber = 1, maxWishes = 3) {
 
 export async function interpretWishWithDirector(
   wishText,
-  provider = 'mock',
+  provider = 'ollama_strong',
   credentials = {},
   themeContext = null,
   wishNumber = 1
 ) {
   const cleanWish = wishText.trim();
   if (!cleanWish) return null;
+
+  const isOllama = provider === 'ollama' || provider === 'ollama_strong' || provider === 'ollama_weak';
 
   const resolvedApiKey = credentials?.apiKey || (
     provider === 'groq'
@@ -82,7 +84,7 @@ export async function interpretWishWithDirector(
       : ''
   ) || '';
 
-  if (provider === 'mock' || (!resolvedApiKey && provider !== 'ollama')) {
+  if (provider === 'mock' || (!isOllama && !resolvedApiKey)) {
     return analyzeHeuristicWish(cleanWish);
   }
 
@@ -99,9 +101,16 @@ export async function interpretWishWithDirector(
       rawResponse = await queryGroq(cleanWish, resolvedApiKey, credentials.model || 'llama-3.3-70b-versatile', systemPrompt);
     } else if (provider === 'gemini') {
       rawResponse = await queryGemini(cleanWish, resolvedApiKey, credentials.model || 'gemini-1.5-flash', systemPrompt);
-    } else if (provider === 'ollama') {
+    } else if (isOllama) {
       const endpoint = credentials.endpoint || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OLLAMA_ENDPOINT) || 'http://localhost:11434';
-      const model = credentials.model || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OLLAMA_MODEL) || 'llama3';
+      let model = 'llama3.2';
+      if (provider === 'ollama_strong') {
+        model = credentials.ollamaStrongModel || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OLLAMA_STRONG_MODEL) || 'llama3.3';
+      } else if (provider === 'ollama_weak') {
+        model = credentials.ollamaWeakModel || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OLLAMA_WEAK_MODEL) || 'llama3.2';
+      } else {
+        model = credentials.model || 'llama3.2';
+      }
       rawResponse = await queryOllama(cleanWish, endpoint, model, systemPrompt);
     }
 
@@ -279,7 +288,7 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
   };
 }
 
-export async function testProviderConnection(provider, apiKey, endpoint = '') {
+export async function testProviderConnection(provider, apiKey, endpoint = '', targetModel = '') {
   if (provider === 'mock') {
     return { success: true, message: 'Offline Mock Director is ready.' };
   }
@@ -291,7 +300,7 @@ export async function testProviderConnection(provider, apiKey, endpoint = '') {
         headers: { 'Authorization': `Bearer ${apiKey}` }
       });
       return res.ok
-        ? { success: true, message: 'Groq API connection verified!' }
+        ? { success: true, message: 'Groq API connection verified! (Llama-3.3 70B ready)' }
         : { success: false, message: `Groq error: ${res.statusText}` };
     } catch (err) {
       return { success: false, message: `Failed to connect to Groq: ${err.message}` };
@@ -303,22 +312,57 @@ export async function testProviderConnection(provider, apiKey, endpoint = '') {
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
       return res.ok
-        ? { success: true, message: 'Google Gemini API connection verified!' }
+        ? { success: true, message: 'Google Gemini API connection verified! (Gemini 2.5 ready)' }
         : { success: false, message: `Gemini error: ${res.statusText}` };
     } catch (err) {
       return { success: false, message: `Failed to connect to Gemini: ${err.message}` };
     }
   }
 
-  if (provider === 'ollama') {
+  if (provider === 'ollama' || provider === 'ollama_strong' || provider === 'ollama_weak') {
     const ep = endpoint || 'http://localhost:11434';
     try {
       const res = await fetch(`${ep.replace(/\/$/, '')}/api/tags`);
-      return res.ok
-        ? { success: true, message: `Ollama connection verified at ${ep}!` }
-        : { success: false, message: `Ollama error: ${res.statusText}` };
+      if (!res.ok) {
+        return { success: false, message: `Ollama error: ${res.statusText}` };
+      }
+      const data = await res.json();
+      const installedModels = (data.models || []).map((m) => m.name || m.model || '');
+
+      if (targetModel) {
+        const targetClean = targetModel.trim().toLowerCase();
+        const found = installedModels.some((m) => {
+          const mClean = m.toLowerCase();
+          return (
+            mClean === targetClean ||
+            mClean.startsWith(targetClean + ':') ||
+            targetClean.startsWith(mClean.split(':')[0])
+          );
+        });
+
+        if (found) {
+          return {
+            success: true,
+            message: `Ollama Online! Model "${targetModel}" is verified & ready.`
+          };
+        } else {
+          const list = installedModels.length > 0 ? installedModels.slice(0, 3).join(', ') : 'none';
+          return {
+            success: true,
+            message: `Ollama Online, but "${targetModel}" not installed yet. Run "ollama run ${targetModel}". (Installed: ${list})`
+          };
+        }
+      }
+
+      return {
+        success: true,
+        message: `Ollama connection verified at ${ep}! (${installedModels.length} models detected)`
+      };
     } catch (err) {
-      return { success: false, message: `Could not reach Ollama at ${ep}: ${err.message}` };
+      return {
+        success: false,
+        message: `Could not reach Ollama at ${ep}. Make sure "ollama serve" is running.`
+      };
     }
   }
 

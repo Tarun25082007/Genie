@@ -1,8 +1,8 @@
-// Settings Modal: Provider Selector (Offline Mock, Groq, Gemini, Ollama) + Connection Tester + Audio/Physics
+// Settings Modal: Provider Selector (Ollama Strong, Ollama Weak, Groq, Gemini) + Connection Tester + Audio/Physics
 import React, { useState } from 'react';
 import { audioSynth } from '../engine/audioSynth';
 import { testProviderConnection } from '../services/llmDirector';
-import { Settings, Volume2, VolumeX, Sliders, Cpu, Key, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Sliders, Cpu, Key, CheckCircle2, AlertCircle, Loader2, X, Terminal, ExternalLink, Zap } from 'lucide-react';
 
 export default function SettingsModal({
   settings,
@@ -12,11 +12,25 @@ export default function SettingsModal({
 }) {
   const [testStatus, setTestStatus] = useState(null);
 
-  const handleProviderChange = (provider) => {
+  const handleProviderChange = (newProvider) => {
     audioSynth.playButton();
-    const next = { ...settings, provider };
+    let apiKey = settings.credentials?.apiKey;
+    if (newProvider === 'gemini') {
+      apiKey = localStorage.getItem('genie_geminiApiKey') || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || apiKey || '';
+    } else if (newProvider === 'groq') {
+      apiKey = localStorage.getItem('genie_groqApiKey') || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) || apiKey || '';
+    }
+
+    const next = {
+      ...settings,
+      provider: newProvider,
+      credentials: {
+        ...settings.credentials,
+        ...(apiKey !== undefined ? { apiKey } : {})
+      }
+    };
     onUpdateSettings(next);
-    localStorage.setItem('genie_provider', provider);
+    localStorage.setItem('genie_provider', newProvider);
     setTestStatus(null);
   };
 
@@ -30,17 +44,29 @@ export default function SettingsModal({
     };
     onUpdateSettings(next);
     localStorage.setItem(`genie_${field}`, val);
+    if (field === 'apiKey') {
+      if (settings.provider === 'gemini') localStorage.setItem('genie_geminiApiKey', val);
+      if (settings.provider === 'groq') localStorage.setItem('genie_groqApiKey', val);
+    }
   };
 
   const handleTestConnection = async () => {
     setTestStatus({ loading: true, message: 'Testing connection...' });
-    const provider = settings.provider || 'mock';
+    const currentProvider = settings.provider || 'ollama_strong';
     const creds = settings.credentials || {};
 
+    let targetModel = creds.model;
+    if (currentProvider === 'ollama_strong') {
+      targetModel = creds.ollamaStrongModel || 'llama3.3';
+    } else if (currentProvider === 'ollama_weak') {
+      targetModel = creds.ollamaWeakModel || 'llama3.2';
+    }
+
     const res = await testProviderConnection(
-      provider,
+      currentProvider,
       creds.apiKey,
-      creds.endpoint
+      creds.endpoint,
+      targetModel
     );
 
     setTestStatus({
@@ -117,35 +143,161 @@ export default function SettingsModal({
                 <Cpu className="w-4 h-4" /> LLM DIRECTOR ROUTER
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                ACTIVE: {provider.toUpperCase()}
+                ACTIVE: {provider === 'ollama_strong' ? 'OLLAMA STRONG' : provider === 'ollama_weak' ? 'OLLAMA WEAK' : provider === 'groq' ? 'GROQ CLOUD' : provider === 'gemini' ? 'GEMINI 2.5' : provider.toUpperCase()}
               </span>
             </div>
 
-            {/* Provider Radio Tabs */}
+            {/* Provider Radio Tabs (Replaced Offline Mock with Ollama Strong & Weak) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {[
-                { id: 'mock', label: 'Offline Mock' },
-                { id: 'groq', label: 'Groq (Llama-3.3)' },
-                { id: 'gemini', label: 'Gemini 2.5' },
-                { id: 'ollama', label: 'Local Ollama' }
+                { id: 'ollama_strong', label: 'Ollama Strong', badge: 'High-IQ' },
+                { id: 'ollama_weak', label: 'Ollama Weak', badge: 'Fast / Light' },
+                { id: 'groq', label: 'Groq Cloud', badge: 'Llama-3.3' },
+                { id: 'gemini', label: 'Gemini 2.5', badge: 'Google' }
               ].map((p) => (
                 <button
                   key={p.id}
                   onClick={() => handleProviderChange(p.id)}
-                  className={`px-2.5 py-2 rounded-lg border text-center transition-all ${
+                  className={`px-2 py-2 rounded-lg border text-center transition-all flex flex-col items-center justify-center gap-0.5 ${
                     provider === p.id
-                      ? 'bg-amber-400/20 border-amber-400 text-amber-300 font-bold'
-                      : 'bg-black/40 border-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-amber-400/20 border-amber-400 text-amber-300 font-bold shadow-md shadow-amber-500/10'
+                      : 'bg-black/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                   }`}
                 >
-                  {p.label}
+                  <span className="text-[11px] leading-tight font-bold">{p.label}</span>
+                  <span className="text-[9px] opacity-75 font-mono">[{p.badge}]</span>
                 </button>
               ))}
             </div>
 
             {/* Credential Inputs based on Provider */}
+            {provider === 'ollama_strong' && (
+              <div className="space-y-2.5 pt-1 bg-black/30 p-2.5 rounded-lg border border-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <span className="text-amber-300 font-bold text-[11px] flex items-center gap-1.5">
+                    <Terminal className="w-3.5 h-3.5 text-amber-400" /> LOCAL OLLAMA (HIGH-IQ REASONING)
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">Default: llama3.3</span>
+                </div>
+                <div>
+                  <label className="text-slate-300 block mb-1">Ollama Endpoint URL:</label>
+                  <input
+                    type="text"
+                    placeholder="http://localhost:11434"
+                    value={creds.endpoint || 'http://localhost:11434'}
+                    onChange={(e) => handleCredentialChange('endpoint', e.target.value)}
+                    className="w-full bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 font-mono text-[11px] focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-300">Strong Model Name:</label>
+                    <span className="text-[10px] text-amber-400 font-mono">Deep Loophole Reasoning</span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="llama3.3"
+                    value={creds.ollamaStrongModel || 'llama3.3'}
+                    onChange={(e) => handleCredentialChange('ollamaStrongModel', e.target.value)}
+                    className="w-full bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 font-mono text-[11px] focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                {/* Quick Model Selector Pills */}
+                <div>
+                  <span className="text-[10px] text-slate-400 block mb-1">Quick Select Recommended Models:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['llama3.3', 'llama3.1:8b', 'qwen2.5:14b', 'deepseek-r1:14b'].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => handleCredentialChange('ollamaStrongModel', m)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${
+                          (creds.ollamaStrongModel || 'llama3.3') === m
+                            ? 'bg-amber-400/25 border-amber-400 text-amber-300 font-bold'
+                            : 'bg-black/50 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-2 rounded bg-amber-950/20 border border-amber-900/40 text-[10px] text-amber-300/80 font-mono">
+                  &gt; Terminal command to run this model: <span className="text-amber-300 font-bold">ollama run {creds.ollamaStrongModel || 'llama3.3'}</span>
+                </div>
+              </div>
+            )}
+
+            {provider === 'ollama_weak' && (
+              <div className="space-y-2.5 pt-1 bg-black/30 p-2.5 rounded-lg border border-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <span className="text-emerald-300 font-bold text-[11px] flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-emerald-400" /> LOCAL OLLAMA (FAST & LIGHTWEIGHT)
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">Default: llama3.2</span>
+                </div>
+                <div>
+                  <label className="text-slate-300 block mb-1">Ollama Endpoint URL:</label>
+                  <input
+                    type="text"
+                    placeholder="http://localhost:11434"
+                    value={creds.endpoint || 'http://localhost:11434'}
+                    onChange={(e) => handleCredentialChange('endpoint', e.target.value)}
+                    className="w-full bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 font-mono text-[11px] focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-300">Fast / Lightweight Model Name:</label>
+                    <span className="text-[10px] text-emerald-400 font-mono">Instant Latency</span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="llama3.2"
+                    value={creds.ollamaWeakModel || 'llama3.2'}
+                    onChange={(e) => handleCredentialChange('ollamaWeakModel', e.target.value)}
+                    className="w-full bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 font-mono text-[11px] focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                {/* Quick Model Selector Pills */}
+                <div>
+                  <span className="text-[10px] text-slate-400 block mb-1">Quick Select Recommended Models:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['llama3.2', 'llama3.2:1b', 'qwen2.5:3b', 'phi3:mini'].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => handleCredentialChange('ollamaWeakModel', m)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${
+                          (creds.ollamaWeakModel || 'llama3.2') === m
+                            ? 'bg-emerald-400/25 border-emerald-400 text-emerald-300 font-bold'
+                            : 'bg-black/50 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-2 rounded bg-emerald-950/20 border border-emerald-900/40 text-[10px] text-emerald-300/80 font-mono">
+                  &gt; Terminal command to run this model: <span className="text-emerald-300 font-bold">ollama run {creds.ollamaWeakModel || 'llama3.2'}</span>
+                </div>
+              </div>
+            )}
+
             {provider === 'groq' && (
-              <div className="space-y-1.5 pt-1">
+              <div className="space-y-2 pt-1 bg-black/30 p-2.5 rounded-lg border border-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <span className="text-amber-300 font-bold text-[11px]">GROQ CLOUD INFERENCE</span>
+                  <a
+                    href="https://console.groq.com/keys"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-amber-400 underline hover:text-amber-300 flex items-center gap-1"
+                  >
+                    Get Free Key <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
                 <label className="text-slate-300 block">Groq API Key (gsk_...):</label>
                 <div className="flex items-center gap-2">
                   <Key className="w-4 h-4 text-slate-500 shrink-0" />
@@ -154,14 +306,25 @@ export default function SettingsModal({
                     placeholder="gsk_..."
                     value={creds.apiKey || ''}
                     onChange={(e) => handleCredentialChange('apiKey', e.target.value)}
-                    className="flex-1 bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 focus:outline-none focus:border-amber-400"
+                    className="flex-1 bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 font-mono text-[11px] focus:outline-none focus:border-amber-400"
                   />
                 </div>
               </div>
             )}
 
             {provider === 'gemini' && (
-              <div className="space-y-1.5 pt-1">
+              <div className="space-y-2 pt-1 bg-black/30 p-2.5 rounded-lg border border-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <span className="text-amber-300 font-bold text-[11px]">GOOGLE GEMINI API</span>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-amber-400 underline hover:text-amber-300 flex items-center gap-1"
+                  >
+                    Get Free Key <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
                 <label className="text-slate-300 block">Google Gemini API Key (AIzaSy...):</label>
                 <div className="flex items-center gap-2">
                   <Key className="w-4 h-4 text-slate-500 shrink-0" />
@@ -170,32 +333,7 @@ export default function SettingsModal({
                     placeholder="AIzaSy..."
                     value={creds.apiKey || ''}
                     onChange={(e) => handleCredentialChange('apiKey', e.target.value)}
-                    className="flex-1 bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-              </div>
-            )}
-
-            {provider === 'ollama' && (
-              <div className="space-y-2 pt-1">
-                <div>
-                  <label className="text-slate-300 block mb-1">Ollama Endpoint URL:</label>
-                  <input
-                    type="text"
-                    placeholder="http://localhost:11434"
-                    value={creds.endpoint || 'http://localhost:11434'}
-                    onChange={(e) => handleCredentialChange('endpoint', e.target.value)}
-                    className="w-full bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-300 block mb-1">Model Name:</label>
-                  <input
-                    type="text"
-                    placeholder="llama3"
-                    value={creds.model || 'llama3'}
-                    onChange={(e) => handleCredentialChange('model', e.target.value)}
-                    className="w-full bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 focus:outline-none focus:border-amber-400"
+                    className="flex-1 bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 font-mono text-[11px] focus:outline-none focus:border-amber-400"
                   />
                 </div>
               </div>
