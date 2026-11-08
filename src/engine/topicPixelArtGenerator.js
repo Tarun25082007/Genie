@@ -23,6 +23,9 @@ export function synthesizeTopicScenario(cleanWish) {
 
 function detectTopicCategory(text) {
   // 1. Specific Iconic / Pop-Culture Entities
+  if (text.match(/\b(dragon|wyvern|drake|fire drake|red dragon|black dragon|shenron|draconic)\b/)) {
+    return 'DRAGON';
+  }
   if (text.match(/\b(godzilla|gojira|kaiju|king kong|gamera|titan|monster zero)\b/)) {
     return 'GODZILLA';
   }
@@ -46,7 +49,7 @@ function detectTopicCategory(text) {
   if (text.match(/\b(car|truck|bike|motorcycle|plane|airplane|jet|rocket|spaceship|boat|ship|submarine|skateboard|vehicle|ferrari|lambo|tesla|drive)\b/)) {
     return 'VEHICLE';
   }
-  if (text.match(/\b(dog|cat|puppy|kitten|dinosaur|dino|t-rex|trex|dragon|monster|alien|zombie|skeleton|bear|shark|wolf|lion|tiger|bird|spider|snake|horse|pet|creature|animal|beast)\b/)) {
+  if (text.match(/\b(dog|cat|puppy|kitten|dinosaur|dino|t-rex|trex|monster|alien|zombie|skeleton|bear|shark|wolf|lion|tiger|bird|spider|snake|horse|pet|creature|animal|beast)\b/)) {
     return 'CREATURE';
   }
   if (text.match(/\b(sword|gun|pistol|rifle|cannon|bomb|axe|knife|dagger|laser|blade|bow|arrow|spear|weapon|missile|katana|bullet|grenade)\b/)) {
@@ -78,6 +81,46 @@ function detectTopicCategory(text) {
  */
 export function generateProceduralPixelSprite(category, wishLower) {
   switch (category) {
+    case 'DRAGON': {
+      // Ancient Flying Fire Dragon (Horned skull, golden belly plates, flame crest, roaring fiery maw)
+      return {
+        name: 'PROCEDURAL_FIRE_DRAGON',
+        width: 16,
+        height: 16,
+        scale: 6.0,
+        mass: 750,
+        restitution: 0.1,
+        palette: {
+          '.': null,
+          'K': '#1a0505', // Obsidian dragon scale outline
+          'R': '#9d0208', // Dark crimson scale
+          'r': '#d90429', // Radiant red scale
+          'Y': '#ffb703', // Fiery slitted dragon eye
+          'W': '#f8f9fa', // Sharp ivory horns & fangs
+          'G': '#ffba08', // Golden belly armor plates
+          'F': '#ff4800'  // Incandescent molten flame core
+        },
+        matrix: [
+          'WW............WW',
+          '.WW...KKKK...WW.',
+          '..WKKKRRRRKKKW..',
+          '..KRrrrrrrrrRK..',
+          '.KRrrYrrrrYrrRK.',
+          'KRrrYYrrrrYYrrRK',
+          'KRrrrrrrrrrrrrRK',
+          'KRWWWWWWWWWWWWKK',
+          'KRWFFFFFFFFFFWRK',
+          'KRWFFFFFFFFFFWRK',
+          'KRWWWWWWWWWWWWKK',
+          '.KRRRGGGGGGGRRK.',
+          '..KRRGGGGGGGRK..',
+          '...KRRGGGGGRK...',
+          '....KRRRRRRK....',
+          '.....KKKKKK.....'
+        ]
+      };
+    }
+
     case 'GODZILLA': {
       // Radioactive King of the Monsters (Dark charcoal skin, atomic cyan glowing dorsal fins, burning yellow eye)
       return {
@@ -594,6 +637,27 @@ export function generateProceduralPixelSprite(category, wishLower) {
  */
 function generateTopicChoreography(category, wishLower, spriteDef) {
   switch (category) {
+    case 'DRAGON':
+      return {
+        genie_taunt: 'You wished to gaze upon a dragon? Savor the sight as an Ancient Wyrm swoops down from the burning heavens to engulf you in 5,000-degree dragonfire!',
+        loophole_explanation: 'Clause 15.2: Failure to establish flight corridors, fire-suppression protocols, or thermal insulation. Dragon executed a dive-bomb strafing run with unconstrained incendiary breath.',
+        voice_pitch: 0.85,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 22, duration_ms: 1000 } },
+          { time_ms: 150, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 8, duration_ms: 800 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 180, y: 70, vx: 20, vy: 18, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 360, verb: 'EMIT_PARTICLES', params: { type: 'FIRE', x: 440, y: 320, count: 400, spread: 65 } },
+          { time_ms: 400, verb: 'EMIT_PARTICLES', params: { type: 'LAVA', x: 480, y: 360, count: 220, spread: 55 } },
+          { time_ms: 430, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 480, y: 380, count: 300, spread: 50 } },
+          { time_ms: 480, verb: 'CAMERA_FX', params: { effect: 'RED_FLASH', intensity: 32, duration_ms: 900 } },
+          { time_ms: 500, verb: 'APPLY_FORCE', params: { target: 'torso', fx: 0.42, fy: 0.28 } },
+          { time_ms: 520, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
+          { time_ms: 550, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 350 } },
+          { time_ms: 580, verb: 'EMIT_PARTICLES', params: { type: 'ASH', x: 480, y: 440, count: 350, spread: 70 } },
+          { time_ms: 620, verb: 'EMIT_PARTICLES', params: { type: 'SMOKE', x: 480, y: 420, count: 280, spread: 75 } }
+        ]
+      };
+
     case 'GODZILLA':
       return {
         genie_taunt: 'You wished to witness Godzilla? Savor the radioactive wrath of the King of the Monsters as his 90,000-ton foot crushes your mortal vessel!',

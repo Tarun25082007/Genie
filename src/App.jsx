@@ -49,6 +49,7 @@ export default function App() {
   const [isCertificateMinimized, setIsCertificateMinimized] = useState(false);
   const [wishNumber, setWishNumber] = useState(1);
   const [survivedWishesCount, setSurvivedWishesCount] = useState(0);
+  const [resetTrigger, setResetTrigger] = useState(0);
 
   // Settings state
   const [settings, setSettings] = useState(() => {
@@ -215,7 +216,7 @@ export default function App() {
     setIsExecuting(false);
     setWishNumber(1);
     setSurvivedWishesCount(0);
-    window.location.reload();
+    setResetTrigger((prev) => prev + 1);
   };
 
   const handleSelectTheme = (themeId) => {
@@ -320,6 +321,7 @@ export default function App() {
           wishNumber={wishNumber}
           onDialogueUpdate={setCurrentDialogue}
           onWishCompleted={handleWishCompleted}
+          resetTrigger={resetTrigger}
         />
 
         {/* Dialogue Box Overlay */}
@@ -500,6 +502,10 @@ export default function App() {
                     onClick={() => {
                       audioSynth.playButton();
                       setActiveCertificate(null);
+                      setIsExecuting(false);
+                      setWishNumber(1);
+                      setSurvivedWishesCount(0);
+                      setResetTrigger((prev) => prev + 1);
                     }}
                     className="px-6 py-2 rounded-xl font-pixel text-xs font-bold tracking-wider uppercase transition-all shadow-lg active:scale-95"
                     style={{

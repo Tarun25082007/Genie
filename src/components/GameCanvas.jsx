@@ -20,7 +20,8 @@ export default function GameCanvas({
   customization,
   wishNumber,
   onDialogueUpdate,
-  onWishCompleted
+  onWishCompleted,
+  resetTrigger
 }) {
   const containerRef = useRef(null);
   const matterCanvasRef = useRef(null);
@@ -275,6 +276,14 @@ export default function GameCanvas({
       }
     }
   }, [wishNumber, customization]);
+
+  // Handle explicit reset & resurrection trigger from App (Try Again / Reset Sandbox)
+  useEffect(() => {
+    if (engineRef.current && resetTrigger > 0) {
+      choreographyRunner.reset();
+      resetSandboxStage(engineRef.current, customization);
+    }
+  }, [resetTrigger, customization]);
 
   // Update Ragdoll customization dynamically
   useEffect(() => {
