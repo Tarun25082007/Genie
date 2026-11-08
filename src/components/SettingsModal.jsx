@@ -1,8 +1,8 @@
-// Settings Modal: Provider Selector (Ollama Strong, Ollama Weak, Groq, Gemini) + Connection Tester + Audio/Physics
+// Settings Modal: Provider Selector (Ollama Strong, Ollama Weak, Groq, Gemini) + Connection Tester + Audio Synth
 import React, { useState } from 'react';
 import { audioSynth } from '../engine/audioSynth';
 import { testProviderConnection } from '../services/llmDirector';
-import { Settings, Volume2, VolumeX, Sliders, Cpu, Key, CheckCircle2, AlertCircle, Loader2, X, Terminal, ExternalLink, Zap } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Cpu, Key, CheckCircle2, AlertCircle, Loader2, X, Terminal, ExternalLink, Zap } from 'lucide-react';
 
 export default function SettingsModal({
   settings,
@@ -120,7 +120,7 @@ export default function SettingsModal({
                 ENGINE & DIRECTOR SETTINGS
               </h2>
               <p className="text-[11px] text-slate-400 font-pixel">
-                Multi-provider LLM director, audio synth & physics parameters
+                Multi-provider LLM director & retro audio synthesizer
               </p>
             </div>
           </div>
@@ -439,28 +439,6 @@ export default function SettingsModal({
                 />
               </div>
             </div>
-          </div>
-
-          {/* 3. Physics Simulation */}
-          <div className="p-3.5 rounded-xl bg-black/40 border border-slate-800 space-y-2">
-            <span className="font-bold text-amber-300 flex items-center gap-1.5">
-              <Sliders className="w-4 h-4" /> MATTER.JS GRAVITY
-            </span>
-            <div className="flex justify-between text-slate-300 mb-1">
-              <span>Vertical Gravity (G)</span>
-              <span>{settings.gravity.toFixed(2)} G</span>
-            </div>
-            <input
-              type="range"
-              min="0.2"
-              max="2.5"
-              step="0.1"
-              value={settings.gravity}
-              onChange={(e) =>
-                onUpdateSettings({ ...settings, gravity: parseFloat(e.target.value) })
-              }
-              className="w-full accent-amber-400 cursor-pointer"
-            />
           </div>
         </div>
 
