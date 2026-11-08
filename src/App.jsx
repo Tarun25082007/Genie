@@ -59,6 +59,18 @@ export default function App() {
       localStorage.setItem('genie_provider', 'ollama_strong');
     }
 
+    let strongModel = localStorage.getItem('genie_ollamaStrongModel');
+    if (!strongModel || strongModel === 'llama3.3') {
+      strongModel = 'qwen2.5:7b';
+      localStorage.setItem('genie_ollamaStrongModel', 'qwen2.5:7b');
+    }
+
+    let weakModel = localStorage.getItem('genie_ollamaWeakModel');
+    if (!weakModel || weakModel === 'llama3.2') {
+      weakModel = 'llama3.2:3b';
+      localStorage.setItem('genie_ollamaWeakModel', 'llama3.2:3b');
+    }
+
     return {
       masterVolume: 0.7,
       sfxVolume: 0.8,
@@ -74,8 +86,8 @@ export default function App() {
         ),
         endpoint: localStorage.getItem('genie_endpoint') || import.meta.env?.VITE_OLLAMA_ENDPOINT || 'http://localhost:11434',
         model: localStorage.getItem('genie_model') || import.meta.env?.VITE_OLLAMA_MODEL || '',
-        ollamaStrongModel: localStorage.getItem('genie_ollamaStrongModel') || import.meta.env?.VITE_OLLAMA_STRONG_MODEL || 'llama3.3',
-        ollamaWeakModel: localStorage.getItem('genie_ollamaWeakModel') || import.meta.env?.VITE_OLLAMA_WEAK_MODEL || 'llama3.2'
+        ollamaStrongModel: strongModel,
+        ollamaWeakModel: weakModel
       }
     };
   });
@@ -527,6 +539,14 @@ export default function App() {
                       setIsExecuting(false);
                       setWishNumber(1);
                       setSurvivedWishesCount(0);
+                      setCurrentDialogue({
+                        speaker: customization?.genie?.name || theme.name.split(':')[1]?.trim() || theme.name,
+                        text: customization?.genie?.introDialogue || theme.introDialogue,
+                        loopholeScore: 100,
+                        loopholeExplanation: 'State your wish carefully... or your vessel will be harvested.',
+                        voicePitch: 1.0,
+                        survived: true
+                      });
                       setResetTrigger((prev) => prev + 1);
                     }}
                     className="px-6 py-2 rounded-xl font-pixel text-xs font-bold tracking-wider uppercase transition-all shadow-lg active:scale-95"

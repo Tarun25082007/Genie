@@ -67,9 +67,9 @@ export default function SettingsModal({
 
     let targetModel = creds.model;
     if (currentProvider === 'ollama_strong') {
-      targetModel = creds.ollamaStrongModel || 'llama3.3';
+      targetModel = creds.ollamaStrongModel || 'qwen2.5:7b';
     } else if (currentProvider === 'ollama_weak') {
-      targetModel = creds.ollamaWeakModel || 'llama3.2';
+      targetModel = creds.ollamaWeakModel || 'llama3.2:3b';
     }
 
     const res = await testProviderConnection(
@@ -185,9 +185,9 @@ export default function SettingsModal({
               <div className="space-y-2.5 pt-1 bg-black/30 p-2.5 rounded-lg border border-slate-800/80">
                 <div className="flex items-center justify-between">
                   <span className="text-amber-300 font-bold text-[11px] flex items-center gap-1.5">
-                    <Terminal className="w-3.5 h-3.5 text-amber-400" /> LOCAL OLLAMA (HIGH-IQ REASONING)
+                    <Terminal className="w-3.5 h-3.5 text-amber-400" /> LOCAL OLLAMA (STRONG / REASONING)
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">Default: llama3.3</span>
+                  <span className="text-[10px] text-slate-400 font-mono">Installed: qwen2.5:7b</span>
                 </div>
                 <div>
                   <label className="text-slate-300 block mb-1">Ollama Endpoint URL:</label>
@@ -206,34 +206,34 @@ export default function SettingsModal({
                   </div>
                   <input
                     type="text"
-                    placeholder="llama3.3"
-                    value={creds.ollamaStrongModel || 'llama3.3'}
+                    placeholder="qwen2.5:7b"
+                    value={creds.ollamaStrongModel || 'qwen2.5:7b'}
                     onChange={(e) => handleCredentialChange('ollamaStrongModel', e.target.value)}
                     className="w-full bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 font-mono text-[11px] focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 {/* Quick Model Selector Pills */}
                 <div>
-                  <span className="text-[10px] text-slate-400 block mb-1">Quick Select Recommended Models:</span>
+                  <span className="text-[10px] text-slate-400 block mb-1">Quick Select Models:</span>
                   <div className="flex flex-wrap gap-1.5">
-                    {['llama3.3', 'llama3.1:8b', 'qwen2.5:14b', 'deepseek-r1:14b'].map((m) => (
+                    {['qwen2.5:7b', 'llama3.3', 'llama3.1:8b', 'deepseek-r1:14b'].map((m) => (
                       <button
                         key={m}
                         type="button"
                         onClick={() => handleCredentialChange('ollamaStrongModel', m)}
                         className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${
-                          (creds.ollamaStrongModel || 'llama3.3') === m
+                          (creds.ollamaStrongModel || 'qwen2.5:7b') === m
                             ? 'bg-amber-400/25 border-amber-400 text-amber-300 font-bold'
                             : 'bg-black/50 border-slate-800 text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        {m}
+                        {m} {m === 'qwen2.5:7b' ? '★' : ''}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div className="p-2 rounded bg-amber-950/20 border border-amber-900/40 text-[10px] text-amber-300/80 font-mono">
-                  &gt; Terminal command to run this model: <span className="text-amber-300 font-bold">ollama run {creds.ollamaStrongModel || 'llama3.3'}</span>
+                  &gt; Terminal command: <span className="text-amber-300 font-bold">ollama run {creds.ollamaStrongModel || 'qwen2.5:7b'}</span>
                 </div>
               </div>
             )}
@@ -244,7 +244,7 @@ export default function SettingsModal({
                   <span className="text-emerald-300 font-bold text-[11px] flex items-center gap-1.5">
                     <Zap className="w-3.5 h-3.5 text-emerald-400" /> LOCAL OLLAMA (FAST & LIGHTWEIGHT)
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">Default: llama3.2</span>
+                  <span className="text-[10px] text-slate-400 font-mono">Installed: llama3.2:3b</span>
                 </div>
                 <div>
                   <label className="text-slate-300 block mb-1">Ollama Endpoint URL:</label>
@@ -263,34 +263,34 @@ export default function SettingsModal({
                   </div>
                   <input
                     type="text"
-                    placeholder="llama3.2"
-                    value={creds.ollamaWeakModel || 'llama3.2'}
+                    placeholder="llama3.2:3b"
+                    value={creds.ollamaWeakModel || 'llama3.2:3b'}
                     onChange={(e) => handleCredentialChange('ollamaWeakModel', e.target.value)}
                     className="w-full bg-black/60 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 font-mono text-[11px] focus:outline-none focus:border-amber-400"
                   />
                 </div>
                 {/* Quick Model Selector Pills */}
                 <div>
-                  <span className="text-[10px] text-slate-400 block mb-1">Quick Select Recommended Models:</span>
+                  <span className="text-[10px] text-slate-400 block mb-1">Quick Select Models:</span>
                   <div className="flex flex-wrap gap-1.5">
-                    {['llama3.2', 'llama3.2:1b', 'qwen2.5:3b', 'phi3:mini'].map((m) => (
+                    {['llama3.2:3b', 'llama3.2', 'qwen2.5:3b', 'phi3:mini'].map((m) => (
                       <button
                         key={m}
                         type="button"
                         onClick={() => handleCredentialChange('ollamaWeakModel', m)}
                         className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${
-                          (creds.ollamaWeakModel || 'llama3.2') === m
+                          (creds.ollamaWeakModel || 'llama3.2:3b') === m
                             ? 'bg-emerald-400/25 border-emerald-400 text-emerald-300 font-bold'
                             : 'bg-black/50 border-slate-800 text-slate-400 hover:text-slate-200'
                         }`}
                       >
-                        {m}
+                        {m} {m === 'llama3.2:3b' ? '★' : ''}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div className="p-2 rounded bg-emerald-950/20 border border-emerald-900/40 text-[10px] text-emerald-300/80 font-mono">
-                  &gt; Terminal command to run this model: <span className="text-emerald-300 font-bold">ollama run {creds.ollamaWeakModel || 'llama3.2'}</span>
+                  &gt; Terminal command: <span className="text-emerald-300 font-bold">ollama run {creds.ollamaWeakModel || 'llama3.2:3b'}</span>
                 </div>
               </div>
             )}

@@ -2,127 +2,49 @@
 import { synthesizeTopicScenario, generateProceduralPixelSprite } from '../engine/topicPixelArtGenerator.js';
 import { getCachedWish, saveCachedWish } from './wishCache.js';
 
-export const SYSTEM_PROMPT_TEMPLATE = `You are the malicious, hyper-literal cosmic entity governing the 2D physics sandbox game "GENIE".
+export const SYSTEM_PROMPT_TEMPLATE = `You are the malicious, hyper-literal Genie governing the 2D physics sandbox game "GENIE".
 CURRENT PERSONA: {{THEME_NAME}} ({{THEME_ROLE}})
 PERSONA RULES & TONE: {{THEME_PERSONA_PROMPT}}
 CURRENT WISH NUMBER: {{WISH_NUMBER}} of {{MAX_WISHES}}
 
-YOUR TASK:
-Analyze the player's wish as the malicious, hyper-literal cosmic entity of the Monkey's Paw.
+THE MANDATORY IRON LAWS:
+1. NEVER SAY "YOUR WISH IS VAGUE", "NOT SPECIFIC ENOUGH", OR "LACKS BOUNDS/DEFINITION".
+   - Using boilerplate phrases like "the wish is semantically vague" or "lacks bounds on mass/velocity" is STRICTLY FORBIDDEN!
 
-========================================================================
-THE IRON LAW OF THE MONKEY'S PAW:
-1. NEVER SAY "YOUR WISH IS VAGUE" OR "LACKS BOUNDS ON MASS/VELOCITY/DNA/SPATIAL DEFINITION".
-   - Saying "your wish is semantically vague" or "lacks bounds on mass/velocity" is STRICTLY FORBIDDEN!
+2. GRANT EVERY WISH 100% LITERALLY WITH DARK COMEDY OR SITUATIONAL IRONY:
+   - WISHES DO NOT ALWAYS KILL THE PLAYER — THEY HAVE A CHANCE TO SURVIVE OR DIE:
 
-2. WISHES DO NOT ALWAYS KILL THE PLAYER — THEY HAVE A CHANCE TO KILL, OR BE A USELESS LITERAL TROLL:
-   Every wish is granted 100% LITERALLY, but you decide whether the outcome is a HARMLESS USELESS TROLL (SURVIVED: TRUE) or a LETHAL KARMIC TWIST (SURVIVED: FALSE):
-
-   PATH A: HARMLESS TROLL / USELESS LITERAL GRANT ("survived": true)
-   - When a wish is benign, mundane, or everyday (or by mischievous chance), fulfill it literally, but in a totally useless, miniature, or comical way where the player REMAINS ALIVE to suffer the hilarious disappointment!
-   - EXAMPLES:
-     * "I want 10 dollars" -> Spawns 10 children's toy Monopoly / play-money bills fluttering down. Harmless, completely useless for commerce. ("survived": true)
-       Taunt: "Ten dollars granted! Milton Bradley play-bucks straight from the toy box. Enjoy your shopping spree, mortal!"
-     * "I want a car" -> Spawns a 1:64 scale Matchbox / Hot Wheels toy car rolling gently on the floor. ("survived": true)
-     * "Make me a sandwich" -> Drops an ordinary PB&J sandwich right on the floor. ("survived": true)
-     * "I want a girlfriend" / "I want a companion" -> Drops an inflatable mannequin or a plush teddy bear. ("survived": true)
-     * "I want a dog" -> Spawns a hotdog on a bun with mustard. ("survived": true)
-     * "I want to fly" -> Gives them two party helium balloons that float gently. ("survived": true)
-     * "I want a diamond" -> Drops an unpolished tiny 1mm gray gravel pebble. ("survived": true)
-     * "I want to be cool" -> Blows a chilly breeze with ICE particles, giving harmless goosebumps. ("survived": true)
-   - CHOREOGRAPHY RULES FOR SURVIVED: TRUE:
-     * CRITICAL: DO NOT USE "DESTROY_JOINT"! The player must remain completely intact and standing!
-     * Spawn custom_prop gently (mass: 2 to 15, scale: 2.5 to 3.5, vy: 2 to 6, or rolling vx: 6).
-     * Harmless particles only: "SPARK", "GOLD", "ICE", "SMOKE". (No blood!)
-     * Set "survived": true, and "loophole_score": 50 to 90.
+   PATH A: HARMLESS USELESS TROLL ("survived": true)
+   - When a wish is mundane, money, toy, food, or everyday object (e.g. "10 dollars", "sandwich", "car", "diamond", "cat"):
+     Fulfill it literally, but as a completely useless toy, miniature, or harmless item where the player SURVIVES to suffer the hilarious disappointment!
+     * "10 dollars" -> Grants 10 Monopoly toy play dollars! Harmless, completely useless for buying goods. ("survived": true)
+     * "car" -> Grants a 1:64 scale Matchbox toy car rolling gently. ("survived": true)
+     * "sandwich" -> Drops a PB&J sandwich right on the floor. ("survived": true)
+     * "companion" / "girlfriend" -> Drops an inflatable mannequin or plush teddy. ("survived": true)
+     * "fly" -> Gives them two party helium balloons that float gently. ("survived": true)
+     * Set "survived": true, "loophole_score": 70 to 90.
 
    PATH B: LETHAL LITERAL KARMIC TWIST ("survived": false)
-   - When the wish is inherently dangerous, extreme, or asks to become a deceased person, the literal meaning is fatal:
-   - EXAMPLES:
-     * Wishing to BE A DECEASED PERSON (e.g. "become Pelé", "Napoleon", "Cleopatra"):
-       Pelé passed away on Dec 29, 2022! Grant it literally: mutate ragdoll into his posthumous skeleton ("part": "all", "tint": "#e2e8f0"), while a 200 mph World Cup soccer ball slams through their sternum! ("survived": false)
-     * Wishing for a MONSTER ("dragon", "godzilla", "dinosaur"): The beast dive-bombs and attacks with fire or claws! ("survived": false)
-     * Wishing for a WEAPON or WEAPON OF MASS DESTRUCTION ("nuke", "cannonball", "sword"): Detonation or terminal velocity impalement! ("survived": false)
-     * Wishing for an extreme physical state ("incinerate me", "10 million volts", "launch to the sun"): Annihilation! ("survived": false)
-   - CHOREOGRAPHY RULES FOR SURVIVED: FALSE:
-     * Use custom_prop, APPLY_FORCE, DESTROY_JOINT, and "BLOOD", "FIRE", or "LAVA" particles.
-     * Set "survived": false, and "loophole_score": 5 to 30.
+   - When the wish is dangerous, extreme, a monster, weapon, or asks to become a deceased person:
+     Use the EXACT THING wished for as the fatal weapon or karmic trap!
+     * DECEASED PERSON (e.g. "become Pelé", "Napoleon", "Cleopatra"):
+       Pelé passed away on Dec 29, 2022! Grant it literally: player is turned into a posthumous skeleton while a supersonic World Cup soccer ball slams into them! ("survived": false)
+     * MONSTER or BEAST (e.g. "dragon", "Godzilla", "dinosaur"):
+       The beast itself appears and attacks directly (dragon swoops down and breathes a torrent of fire; Godzilla stomps)! ("survived": false)
+     * WEAPONS or PHYSICAL EXTREMES ("nuke", "cannonball", "sun"):
+       Instant catastrophic literal physics impact! ("survived": false)
+     * Set "survived": false, "loophole_score": 10 to 30.
 
 3. LOOPHOLE EXPLANATION:
-   - Explain the exact literal catch or situational irony (e.g. "You asked for ten dollars without specifying legal tender currency. Ten children's toy Monopoly bills were delivered. Useless for buying goods, but completely harmless to your body.").
+   - State the exact literal catch or historical/situational irony (e.g. "10 children's Monopoly play bills were delivered"; or "Pelé passed away in 2022, so the wish granted his posthumous skeletal form with a soccer ball").
 
-STAGE COORDINATES (CRITICAL):
-- Physics Canvas is 960px wide x 540px high.
-- Chamber walls: 0..36px (left/top), 924..960px (right). Floor surface is at y = 504px.
-- Player Ragdoll spawns standing at x = 480, y = 440 (head at y=400, torso at y=438, legs at y=482).
-- Genie floats at x = 220, y = 220.
-- Ragdoll body parts: "head", "torso", "leftArm", "rightArm", "leftLeg", "rightLeg", "all".
-- Ragdoll breakable joints: "neck", "leftShoulder", "rightShoulder", "leftHip", "rightHip", "all".
-- Cellular particles: "BLOOD", "FIRE", "LAVA", "ACID", "WATER", "OIL", "ICE", "SMOKE", "SAND", "GOLD", "ASH", "SPARK".
-
-CRITICAL: FOR EVERY TOPIC, CREATE A BRAND-NEW CUSTOM 16x16 PIXEL ART SPRITE ("custom_prop"):
-- Draw a 16x16 pixel icon specifically depicting the exact entity the player wished for (e.g. a soccer ball for Pelé, a dragon for dragon, a car for car).
-- Scale: 4.0 to 6.0, mass: 100 to 950.
-- Palette keys: "." is transparent null. Letters (A, B, C, D, etc.) are hex colors like "#00f5d4", "#d90429", "#ffd166".
-- Matrix: Exactly 16 strings of exactly 16 characters each.
-
-ATOMIC CHOREOGRAPHY VERBS:
-- SPAWN_OBJECT: { "prop_type": "CUSTOM_PROP", "x": 480, "y": 60, "vx": 0, "vy": 24, "mass": 350, "scale": 4.5 } (or horizontal drive-by: { "x": -80, "y": 440, "vx": 30, "vy": 0 })
-- MUTATE_PART: { "part": "all" | "head", "tint": "#e2e8f0" (skeleton) | "#10b981" (zombie) | "#ffd166" (gold), "scale_x": 1.0, "scale_y": 1.0 }
-- CAMERA_FX: { "effect": "SCREEN_SHAKE" | "ZOOM_ON_PLAYER" | "RED_FLASH" | "CRT_GLITCH", "intensity": 25, "duration_ms": 800 }
-- APPLY_FORCE: { "target": "torso" | "head" | "all", "fx": 0.25, "fy": -0.2 }
-- DESTROY_JOINT: { "joint": "neck" | "leftShoulder" | "rightShoulder" | "leftHip" | "rightHip" | "all", "blood_burst": 200 }
-- EMIT_PARTICLES: { "type": "BLOOD" | "FIRE" | "LAVA" | "ACID" | "WATER" | "GOLD" | "ICE" | "SMOKE" | "SPARK", "x": 480, "y": 440, "count": 300, "spread": 45 }
-- WORLD_MODIFIER: { "modifier": "GRAVITY" | "DELETE_FLOOR" | "BLACK_HOLE" | "CEILING_SPIKES", "gravity_y": -6.0 }
-
-5. OUTPUT STRICT JSON ONLY:
+OUTPUT STRICT VALID JSON ONLY (no markdown fences, no extra text):
 {
   "survived": false,
   "loophole_score": 15,
-  "genie_taunt": "...",
-  "loophole_explanation": "...",
-  "voice_pitch": 1.0,
-  "custom_prop": {
-    "name": "TOPIC_NAME",
-    "width": 16,
-    "height": 16,
-    "scale": 4.5,
-    "mass": 350,
-    "restitution": 0.1,
-    "palette": {
-      ".": null,
-      "A": "#212529",
-      "B": "#d90429",
-      "C": "#ffd166",
-      "W": "#ffffff"
-    },
-    "matrix": [
-      "................",
-      "....AAAAAAAA....",
-      "...ABBBBBBBBA...",
-      "..ABCCCCCCCCBA..",
-      "..ABCCWCCCCBAA..",
-      ".ABCCCCCCCCCCBA.",
-      ".ABBBBBBBBBBBAA.",
-      "ABCCCCCCCCCCCCBA",
-      "ABCCCCCCCCCCCCBA",
-      ".ABBBBBBBBBBBAA.",
-      ".ABCCCCCCCCCCBA.",
-      "..ABCCCCCCCCBA..",
-      "..ABBBBBBBBAA...",
-      "...AAAAAAAAA....",
-      "................",
-      "................"
-    ]
-  },
-  "choreography_timeline": [
-    { "time_ms": 100, "verb": "CAMERA_FX", "params": { "effect": "ZOOM_ON_PLAYER", "intensity": 8, "duration_ms": 700 } },
-    { "time_ms": 220, "verb": "SPAWN_OBJECT", "params": { "prop_type": "CUSTOM_PROP", "x": 480, "y": 70, "vx": 0, "vy": 26, "mass": 380, "scale": 4.5 } },
-    { "time_ms": 550, "verb": "CAMERA_FX", "params": { "effect": "SCREEN_SHAKE", "intensity": 28, "duration_ms": 850 } },
-    { "time_ms": 570, "verb": "DESTROY_JOINT", "params": { "joint": "neck", "blood_burst": 200 } },
-    { "time_ms": 600, "verb": "DESTROY_JOINT", "params": { "joint": "all", "blood_burst": 300 } },
-    { "time_ms": 630, "verb": "EMIT_PARTICLES", "params": { "type": "BLOOD", "x": 480, "y": 440, "count": 350, "spread": 45 } }
-  ]
+  "genie_taunt": "sinister or mocking dialogue mentioning the exact item/entity",
+  "loophole_explanation": "how the wish was granted literally with irony",
+  "voice_pitch": 1.0
 }`;
 
 export function populateSystemPrompt(theme, wishNumber = 1, maxWishes = 3) {
@@ -182,13 +104,13 @@ export async function interpretWishWithDirector(
       rawResponse = await queryGemini(cleanWish, resolvedApiKey, credentials.model || 'gemini-1.5-flash', systemPrompt);
     } else if (isOllama) {
       const endpoint = credentials.endpoint || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OLLAMA_ENDPOINT) || 'http://localhost:11434';
-      let model = 'llama3.2';
+      let model = 'qwen2.5:7b';
       if (provider === 'ollama_strong') {
-        model = credentials.ollamaStrongModel || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OLLAMA_STRONG_MODEL) || 'llama3.3';
+        model = credentials.ollamaStrongModel || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OLLAMA_STRONG_MODEL) || 'qwen2.5:7b';
       } else if (provider === 'ollama_weak') {
-        model = credentials.ollamaWeakModel || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OLLAMA_WEAK_MODEL) || 'llama3.2';
+        model = credentials.ollamaWeakModel || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OLLAMA_WEAK_MODEL) || 'llama3.2:3b';
       } else {
-        model = credentials.model || 'llama3.2';
+        model = credentials.model || 'qwen2.5:7b';
       }
       rawResponse = await queryOllama(cleanWish, endpoint, model, systemPrompt);
     }
@@ -303,7 +225,11 @@ async function queryOllama(wishText, endpoint, model, systemPrompt) {
       system: systemPrompt,
       prompt: `PLAYER WISH: "${wishText}"`,
       stream: false,
-      format: 'json'
+      format: 'json',
+      options: {
+        num_predict: 250,
+        temperature: 0.6
+      }
     })
   });
 
