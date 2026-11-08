@@ -50,9 +50,15 @@ export default function WishInputBar({
   const remainingOrbs = Math.max(0, maxWishes - (wishNumber - 1));
 
   return (
-    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-11/12 max-w-3xl z-40 select-none space-y-1.5">
-      {/* Quick-Preset Chips Row */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-11/12 max-w-3xl z-40 select-none space-y-1.5 transition-all duration-300">
+      {/* Quick-Preset Chips Row (Auto-collapses during execution to uncover stage floor) */}
+      <div
+        className={`flex items-center gap-1.5 overflow-x-auto scrollbar-none transition-all duration-300 ${
+          isExecuting
+            ? 'max-h-0 opacity-0 pointer-events-none py-0'
+            : 'max-h-12 opacity-100 pb-1'
+        }`}
+      >
         {quickPresets.map((chip, idx) => (
           <button
             key={idx}
@@ -71,7 +77,9 @@ export default function WishInputBar({
         onSubmit={handleSubmit}
         className="flex items-center gap-2 p-2 rounded-2xl border-2 backdrop-blur-md shadow-2xl transition-all"
         style={{
-          backgroundColor: theme?.chamberColors?.bgBottom ? `${theme.chamberColors.bgBottom}f2` : '#0f1325f2',
+          backgroundColor: theme?.chamberColors?.bgBottom
+            ? `${theme.chamberColors.bgBottom}${isExecuting ? 'cc' : 'f2'}`
+            : isExecuting ? 'rgba(15, 19, 37, 0.80)' : '#0f1325f2',
           borderColor: theme?.chamberColors?.accentHex || '#ffd166',
           boxShadow: `0 0 20px ${theme?.chamberColors?.accentHex ? theme.chamberColors.accentHex + '33' : 'rgba(255,209,102,0.2)'}`
         }}
@@ -99,29 +107,39 @@ export default function WishInputBar({
           </div>
         </div>
 
-        {/* Text Input Field */}
-        <input
-          type="text"
-          value={wishInput}
-          onChange={(e) => setWishInput(e.target.value)}
-          disabled={isExecuting}
-          placeholder={isExecuting ? "Executing wish choreography..." : "Enter your wish (or pick a preset chip above)..."}
-          className="flex-1 bg-black/40 border border-slate-700/60 focus:border-amber-400 rounded-xl px-4 py-2 text-xs md:text-sm font-pixel text-slate-100 placeholder:text-slate-500 focus:outline-none transition-colors disabled:opacity-50"
-        />
+        {/* Live Execution Indicator OR Text Input Field */}
+        {isExecuting ? (
+          <div className="flex-1 flex items-center justify-center gap-2 py-1.5 px-3 rounded-xl bg-black/40 border border-amber-400/30 text-xs font-pixel text-amber-300 animate-pulse">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+            <span className="tracking-wider uppercase font-bold">
+              Executing Wish Choreography...
+            </span>
+          </div>
+        ) : (
+          <>
+            <input
+              type="text"
+              value={wishInput}
+              onChange={(e) => setWishInput(e.target.value)}
+              placeholder="Enter your wish (or pick a preset chip above)..."
+              className="flex-1 bg-black/40 border border-slate-700/60 focus:border-amber-400 rounded-xl px-4 py-2 text-xs md:text-sm font-pixel text-slate-100 placeholder:text-slate-500 focus:outline-none transition-colors"
+            />
 
-        {/* Submit Grant Button */}
-        <button
-          type="submit"
-          disabled={isExecuting || !wishInput.trim()}
-          className="px-4 py-2 rounded-xl font-pixel text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 shadow-lg active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-          style={{
-            backgroundColor: theme?.chamberColors?.accentHex || '#ffd166',
-            color: '#090d1c'
-          }}
-        >
-          <span>GRANT</span>
-          <Send className="w-3.5 h-3.5" />
-        </button>
+            {/* Submit Grant Button */}
+            <button
+              type="submit"
+              disabled={!wishInput.trim()}
+              className="px-4 py-2 rounded-xl font-pixel text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 shadow-lg active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              style={{
+                backgroundColor: theme?.chamberColors?.accentHex || '#ffd166',
+                color: '#090d1c'
+              }}
+            >
+              <span>GRANT</span>
+              <Send className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
 
         {/* Reset Sandbox Button */}
         <button

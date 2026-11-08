@@ -32,7 +32,9 @@ import {
   Wind,
   Mountain,
   Fuel,
-  X
+  X,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export default function App() {
@@ -57,6 +59,7 @@ export default function App() {
   const [currentDialogue, setCurrentDialogue] = useState(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [activeCertificate, setActiveCertificate] = useState(null);
+  const [isCertificateMinimized, setIsCertificateMinimized] = useState(false);
   const [wishNumber, setWishNumber] = useState(1);
   const [survivedWishesCount, setSurvivedWishesCount] = useState(0);
 
@@ -361,6 +364,7 @@ export default function App() {
           dialogue={currentDialogue}
           theme={theme}
           onDismiss={() => setCurrentDialogue(null)}
+          isExecuting={isExecuting}
         />
 
         {/* Wish Input Bar Overlay */}
@@ -374,108 +378,180 @@ export default function App() {
         />
 
         {/* ======================================================== */}
-        {/* MONKEY'S PAW OUTCOME CERTIFICATE MODAL                    */}
+        {/* MONKEY'S PAW OUTCOME CERTIFICATE: MODAL & MINIMIZED PILL */}
         {/* ======================================================== */}
         {activeCertificate && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none animate-in fade-in zoom-in-95 duration-200">
+          isCertificateMinimized ? (
+            /* Minimized Outcome Pill (Leaves sandbox 100% interactable & visible) */
             <div
-              className="w-full max-w-lg rounded-2xl border-2 p-6 shadow-2xl relative"
+              className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2 rounded-2xl border-2 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom duration-200 select-none"
               style={{
-                backgroundColor: theme.chamberColors.bgBottom,
-                borderColor: theme.chamberColors.accentHex,
-                boxShadow: `0 0 45px ${theme.chamberColors.accentHex}55`
+                backgroundColor: theme.chamberColors.bgBottom ? `${theme.chamberColors.bgBottom}ee` : '#0f1325ee',
+                borderColor: activeCertificate.survived ? '#10b981' : theme.chamberColors.accentHex,
+                boxShadow: `0 0 25px ${activeCertificate.survived ? '#10b98144' : theme.chamberColors.accentHex + '44'}`
               }}
             >
+              <div className="flex items-center gap-2 text-xs font-pixel font-bold">
+                {activeCertificate.survived ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <Skull className="w-4 h-4 text-rose-400" />
+                )}
+                <span className={activeCertificate.survived ? 'text-emerald-300' : 'text-rose-300'}>
+                  {activeCertificate.survived ? 'WISH SURVIVED!' : 'RAGDOLL SLAIN!'} ({activeCertificate.loophole_score}/100)
+                </span>
+              </div>
+
               <button
-                onClick={() => setActiveCertificate(null)}
-                className="absolute top-4 right-4 p-1 rounded-lg bg-black/40 hover:bg-black/60 border border-slate-700 text-slate-400 hover:text-white"
+                type="button"
+                onClick={() => setIsCertificateMinimized(false)}
+                className="px-3 py-1 rounded-xl text-xs font-pixel font-bold tracking-wider uppercase transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                style={{
+                  backgroundColor: theme.chamberColors.accentHex,
+                  color: '#0a0d1b'
+                }}
               >
-                <X className="w-4 h-4" />
+                <Eye className="w-3.5 h-3.5" />
+                <span>CERTIFICATE</span>
               </button>
 
-              {/* Seal */}
-              <div className="flex flex-col items-center text-center pb-4 mb-4 border-b border-slate-700/60">
-                <div
-                  className="w-14 h-14 rounded-full p-2 border-2 flex items-center justify-center mb-2 bg-black/60"
-                  style={{ borderColor: theme.chamberColors.accentHex }}
-                >
-                  {activeCertificate.survived ? (
-                    <CheckCircle2 className="w-8 h-8 text-emerald-400" />
-                  ) : (
-                    <Award className="w-8 h-8" style={{ color: theme.chamberColors.accentHex }} />
-                  )}
-                </div>
-                <span className="text-[10px] tracking-widest uppercase font-bold text-slate-400">
-                  {theme.role}
-                </span>
-                <h2 className="text-lg md:text-xl font-bold text-slate-100 mt-1 uppercase">
-                  {activeCertificate.survived ? 'LOOPHOLE-FREE WISH! YOU SURVIVED!' : 'WISH GRANTED LITERALLY — YOU DIED'}
-                </h2>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  audioSynth.playButton();
+                  setActiveCertificate(null);
+                }}
+                title="Dismiss"
+                className="p-1 rounded-lg bg-black/40 hover:bg-black/60 border border-slate-700 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            /* Full Certificate Modal with Non-Obtrusive Semi-Transparent Backdrop */
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-sm select-none animate-in fade-in zoom-in-95 duration-200">
+              <div
+                className="w-full max-w-lg rounded-2xl border-2 p-5 md:p-6 shadow-2xl relative"
+                style={{
+                  backgroundColor: theme.chamberColors.bgBottom ? `${theme.chamberColors.bgBottom}f6` : '#0f1325f6',
+                  borderColor: theme.chamberColors.accentHex,
+                  boxShadow: `0 0 45px ${theme.chamberColors.accentHex}55`
+                }}
+              >
+                {/* Header Controls: View Arena (Minimize) & Close */}
+                <div className="absolute top-4 right-4 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsCertificateMinimized(true)}
+                    title="View Arena & Physics Playground"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/40 hover:bg-black/60 border border-slate-700 text-slate-300 hover:text-white text-xs font-pixel"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-amber-400" />
+                    <span>VIEW ARENA</span>
+                  </button>
 
-              {/* Certificate Details */}
-              <div className="space-y-3 text-xs font-pixel">
-                <div className="p-2.5 rounded-lg bg-black/40 border border-slate-800">
-                  <span className="text-slate-400 uppercase text-[10px] block font-bold">WISH COVENANT:</span>
-                  <span className="text-sm font-bold text-amber-300">
-                    "{activeCertificate.wishText}"
+                  <button
+                    type="button"
+                    onClick={() => setActiveCertificate(null)}
+                    className="p-1 rounded-lg bg-black/40 hover:bg-black/60 border border-slate-700 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Seal */}
+                <div className="flex flex-col items-center text-center pb-3 mb-3 border-b border-slate-700/60">
+                  <div
+                    className="w-12 h-12 md:w-14 md:h-14 rounded-full p-2 border-2 flex items-center justify-center mb-2 bg-black/60"
+                    style={{ borderColor: theme.chamberColors.accentHex }}
+                  >
+                    {activeCertificate.survived ? (
+                      <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+                    ) : (
+                      <Award className="w-7 h-7" style={{ color: theme.chamberColors.accentHex }} />
+                    )}
+                  </div>
+                  <span className="text-[10px] tracking-widest uppercase font-bold text-slate-400">
+                    {theme.role}
                   </span>
+                  <h2 className="text-base md:text-lg font-bold text-slate-100 mt-1 uppercase">
+                    {activeCertificate.survived ? 'LOOPHOLE-FREE WISH! YOU SURVIVED!' : 'WISH GRANTED LITERALLY — YOU DIED'}
+                  </h2>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className={`p-2.5 rounded-lg border ${activeCertificate.survived ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
-                    <span className={`uppercase text-[10px] block font-bold ${activeCertificate.survived ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      AIRTIGHT SCORE:
-                    </span>
-                    <span className={`font-bold text-sm ${activeCertificate.survived ? 'text-emerald-300' : 'text-rose-300'}`}>
-                      {activeCertificate.loophole_score}/100
+                {/* Certificate Details */}
+                <div className="space-y-2.5 text-xs font-pixel">
+                  <div className="p-2.5 rounded-lg bg-black/40 border border-slate-800">
+                    <span className="text-slate-400 uppercase text-[10px] block font-bold">WISH COVENANT:</span>
+                    <span className="text-sm font-bold text-amber-300">
+                      "{activeCertificate.wishText}"
                     </span>
                   </div>
 
-                  <div className={`p-2.5 rounded-lg border ${activeCertificate.survived ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
-                    <span className={`uppercase text-[10px] block font-bold ${activeCertificate.survived ? 'text-emerald-400' : 'text-amber-400'}`}>
-                      VESSEL STATUS:
-                    </span>
-                    <span className={`font-bold text-xs ${activeCertificate.survived ? 'text-emerald-300' : 'text-amber-300'}`}>
-                      {activeCertificate.survived ? 'ALIVE & INTACT' : 'DISARTICULATED'}
-                    </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className={`p-2.5 rounded-lg border ${activeCertificate.survived ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
+                      <span className={`uppercase text-[10px] block font-bold ${activeCertificate.survived ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        AIRTIGHT SCORE:
+                      </span>
+                      <span className={`font-bold text-sm ${activeCertificate.survived ? 'text-emerald-300' : 'text-rose-300'}`}>
+                        {activeCertificate.loophole_score}/100
+                      </span>
+                    </div>
+
+                    <div className={`p-2.5 rounded-lg border ${activeCertificate.survived ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+                      <span className={`uppercase text-[10px] block font-bold ${activeCertificate.survived ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        VESSEL STATUS:
+                      </span>
+                      <span className={`font-bold text-xs ${activeCertificate.survived ? 'text-emerald-300' : 'text-amber-300'}`}>
+                        {activeCertificate.survived ? 'ALIVE & INTACT' : 'DISARTICULATED'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {activeCertificate.loophole_explanation && (
+                    <div className="p-2.5 rounded-lg bg-black/60 border border-slate-800 text-[11px] space-y-1">
+                      <span className="text-amber-300 font-bold block">LEGAL EXPLANATION:</span>
+                      <p className="text-slate-300 leading-relaxed">{activeCertificate.loophole_explanation}</p>
+                    </div>
+                  )}
+
+                  <div className="p-2.5 rounded-lg bg-black/70 border border-slate-700/80 text-center">
+                    <p className="text-slate-300 italic text-xs">
+                      "{activeCertificate.genie_taunt}"
+                    </p>
                   </div>
                 </div>
 
-                {activeCertificate.loophole_explanation && (
-                  <div className="p-2.5 rounded-lg bg-black/60 border border-slate-800 text-[11px] space-y-1">
-                    <span className="text-amber-300 font-bold block">LEGAL EXPLANATION:</span>
-                    <p className="text-slate-300 leading-relaxed">{activeCertificate.loophole_explanation}</p>
-                  </div>
-                )}
+                {/* Action Buttons: Continue + Inspect Arena */}
+                <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsCertificateMinimized(true)}
+                    className="px-4 py-2 rounded-xl font-pixel text-xs font-bold tracking-wider uppercase transition-all bg-black/50 hover:bg-black/70 border border-slate-700 text-slate-300 hover:text-white"
+                  >
+                    INSPECT ARENA
+                  </button>
 
-                <div className="p-3 rounded-lg bg-black/70 border border-slate-700/80 text-center">
-                  <p className="text-slate-300 italic">
-                    "{activeCertificate.genie_taunt}"
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioSynth.playButton();
+                      setActiveCertificate(null);
+                    }}
+                    className="px-6 py-2 rounded-xl font-pixel text-xs font-bold tracking-wider uppercase transition-all shadow-lg active:scale-95"
+                    style={{
+                      backgroundColor: theme.chamberColors.accentHex,
+                      color: '#0a0d1b'
+                    }}
+                  >
+                    {activeCertificate.survived
+                      ? (survivedWishesCount >= theme.maxWishes ? 'CLAIM VICTORY' : `PROCEED TO WISH (${wishNumber}/${theme.maxWishes})`)
+                      : 'TRY AGAIN (RESET TO WISH 1)'}
+                  </button>
                 </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="mt-5 pt-3 border-t border-slate-700/60 flex justify-center">
-                <button
-                  onClick={() => {
-                    audioSynth.playButton();
-                    setActiveCertificate(null);
-                  }}
-                  className="px-6 py-2 rounded-xl font-pixel text-xs font-bold tracking-wider uppercase transition-all shadow-lg active:scale-95"
-                  style={{
-                    backgroundColor: theme.chamberColors.accentHex,
-                    color: '#0a0d1b'
-                  }}
-                >
-                  {activeCertificate.survived
-                    ? (survivedWishesCount >= theme.maxWishes ? 'CLAIM VICTORY' : `PROCEED TO WISH (${wishNumber}/${theme.maxWishes})`)
-                    : 'TRY AGAIN (RESET TO WISH 1)'}
-                </button>
               </div>
             </div>
-          </div>
+          )
         )}
       </main>
 

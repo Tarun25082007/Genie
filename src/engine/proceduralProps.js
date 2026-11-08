@@ -126,14 +126,13 @@ export function createPropFromVerb(params, customPropDef) {
     const offsetX = count > 1 ? (i - (count - 1) / 2) * spreadX : 0;
     const x = startX + offsetX;
     const y = startY - i * 30;
-    const propType = params.prop_type || 'ANVIL';
-
+    const rawProp = String(params.prop_type || 'ANVIL').toUpperCase();
     let body;
 
-    if (propType.startsWith('TETRIS_')) {
+    if (rawProp.startsWith('TETRIS_')) {
       const tileSize = (params.scale || 4) * 5;
-      body = createTetrisBody(propType, x, y, tileSize);
-    } else if (propType === 'CUSTOM_PROP' && customPropDef) {
+      body = createTetrisBody(rawProp, x, y, tileSize);
+    } else if ((rawProp === 'CUSTOM_PROP' || rawProp === 'CUSTOM') && customPropDef && customPropDef.matrix) {
       const scale = customPropDef.scale || params.scale || 4;
       const w = 16 * scale;
       const h = 16 * scale;
@@ -149,7 +148,125 @@ export function createPropFromVerb(params, customPropDef) {
         width: w,
         height: h
       };
-    } else if (propType === 'ANVIL') {
+    } else if (rawProp.includes('SANDWICH') || rawProp.includes('BLT') || rawProp.includes('SUB') || rawProp.includes('BURGER')) {
+      const scale = params.scale || 4.5;
+      const w = 18 * scale;
+      const h = 16 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 400,
+        restitution: 0.05,
+        friction: 0.9,
+        label: 'prop_sandwich'
+      });
+      body.customData = { propType: 'sandwich', width: w, height: h, spriteKey: 'GIANT_SANDWICH', scale };
+    } else if (rawProp.includes('CAR') || rawProp.includes('VEHICLE') || rawProp.includes('AUTO')) {
+      const scale = params.scale || 4;
+      const w = 24 * scale;
+      const h = 12 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 450,
+        restitution: 0.2,
+        friction: 0.7,
+        label: 'prop_car'
+      });
+      body.customData = { propType: 'car', width: w, height: h, spriteKey: 'SPORTS_CAR', scale };
+    } else if (rawProp.includes('BALLOON') || rawProp.includes('HELIUM')) {
+      const scale = params.scale || 3.5;
+      const r = 8 * scale;
+      body = Bodies.circle(x, y, r, {
+        mass: params.mass || 2,
+        restitution: 0.6,
+        frictionAir: 0.05,
+        label: 'prop_balloon'
+      });
+      body.customData = { propType: 'balloon', radius: r, spriteKey: 'BALLOON', scale, buoyant: true };
+    } else if (rawProp.includes('EXAM') || rawProp.includes('PAPER') || rawProp.includes('SHEET') || rawProp.includes('BOOK')) {
+      const scale = params.scale || 3;
+      const w = 16 * scale;
+      const h = 18 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 1.5,
+        frictionAir: 0.12,
+        restitution: 0.2,
+        label: 'prop_exam_sheet'
+      });
+      body.customData = { propType: 'exam_sheet', width: w, height: h, spriteKey: 'EXAM_SHEET', scale, flutter: true };
+    } else if (rawProp.includes('DEER') || rawProp.includes('BUCK') || rawProp.includes('STAMPEDE') || rawProp.includes('STAG')) {
+      const scale = params.scale || 3.5;
+      const w = 18 * scale;
+      const h = 16 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 180,
+        restitution: 0.2,
+        friction: 0.4,
+        label: 'prop_deer'
+      });
+      body.customData = { propType: 'deer', width: w, height: h, spriteKey: 'HORNED_DEER', scale, charge: true };
+    } else if (rawProp.includes('SARCOPHAGUS') || rawProp.includes('COFFIN') || rawProp.includes('TOMB')) {
+      const scale = params.scale || 4.5;
+      const w = 18 * scale;
+      const h = 24 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 850,
+        restitution: 0.05,
+        friction: 0.9,
+        label: 'prop_sarcophagus'
+      });
+      body.customData = { propType: 'sarcophagus', width: w, height: h, spriteKey: 'TUNGSTEN_SARCOPHAGUS', scale };
+    } else if (rawProp.includes('SAFE') || rawProp.includes('VAULT') || rawProp.includes('CHEST')) {
+      const scale = params.scale || 4.5;
+      const w = 18 * scale;
+      const h = 18 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 950,
+        restitution: 0.05,
+        friction: 0.95,
+        label: 'prop_safe'
+      });
+      body.customData = { propType: 'safe', width: w, height: h, spriteKey: 'SAFE', scale };
+    } else if (rawProp.includes('STATUE') || rawProp.includes('FRIEND') || rawProp.includes('MANNEQUIN') || rawProp.includes('GOLEM')) {
+      const scale = params.scale || 4.5;
+      const w = 18 * scale;
+      const h = 26 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 650,
+        restitution: 0.08,
+        friction: 0.85,
+        label: 'prop_statue'
+      });
+      body.customData = { propType: 'statue', width: w, height: h, spriteKey: 'STATUE_FRIEND', scale };
+    } else if (rawProp.includes('METEOR') || rawProp.includes('ASTEROID') || rawProp.includes('ROCK') || rawProp.includes('BOULDER')) {
+      const scale = params.scale || 4;
+      const r = 10 * scale;
+      body = Bodies.circle(x, y, r, {
+        mass: params.mass || 320,
+        restitution: 0.2,
+        friction: 0.6,
+        label: 'prop_meteor'
+      });
+      body.customData = { propType: 'meteor', radius: r, spriteKey: 'METEOR', scale };
+    } else if (rawProp.includes('GOLD') || rawProp.includes('COIN') || rawProp.includes('BULLION') || rawProp.includes('CASH') || rawProp.includes('MONEY')) {
+      const scale = params.scale || 3;
+      const w = 16 * scale;
+      const h = 8 * scale;
+      body = Bodies.rectangle(x, y, w, h, {
+        mass: params.mass || 60,
+        restitution: 0.4,
+        friction: 0.5,
+        label: 'prop_gold_bar'
+      });
+      body.customData = { propType: 'gold_bar', width: w, height: h, spriteKey: 'GOLD_BAR' };
+    } else if (rawProp.includes('SPIKE') || rawProp.includes('MACE') || rawProp.includes('BOMB')) {
+      const scale = params.scale || 4;
+      const r = 8 * scale;
+      body = Bodies.circle(x, y, r, {
+        mass: params.mass || 120,
+        restitution: 0.3,
+        friction: 0.6,
+        label: 'prop_spike_ball'
+      });
+      body.customData = { propType: 'spike_ball', radius: r, spriteKey: 'SPIKE_BALL' };
+    } else if (rawProp.includes('ANVIL') || rawProp.includes('WEIGHT') || rawProp.includes('HAMMER')) {
       const scale = params.scale || 4;
       const w = 18 * scale;
       const h = 14 * scale;
@@ -161,124 +278,17 @@ export function createPropFromVerb(params, customPropDef) {
         label: 'prop_anvil'
       });
       body.customData = { propType: 'anvil', width: w, height: h };
-    } else if (propType === 'SPIKE_BALL') {
+    } else if (PIXEL_SPRITES[rawProp]) {
       const scale = params.scale || 4;
-      const r = 8 * scale;
-      body = Bodies.circle(x, y, r, {
-        mass: params.mass || 120,
-        restitution: 0.3,
-        friction: 0.6,
-        label: 'prop_spike_ball'
-      });
-      body.customData = { propType: 'spike_ball', radius: r, spriteKey: 'SPIKE_BALL' };
-    } else if (propType === 'GOLD_BAR') {
-      const scale = params.scale || 3;
       const w = 16 * scale;
-      const h = 8 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 60,
-        restitution: 0.4,
-        friction: 0.5,
-        label: 'prop_gold_bar'
-      });
-      body.customData = { propType: 'gold_bar', width: w, height: h, spriteKey: 'GOLD_BAR' };
-    } else if (propType === 'BALLOON' || propType === 'HELIUM_BALLOONS') {
-      const scale = params.scale || 3.5;
-      const r = 8 * scale;
-      body = Bodies.circle(x, y, r, {
-        mass: params.mass || 2,
-        restitution: 0.6,
-        frictionAir: 0.05,
-        label: 'prop_balloon'
-      });
-      body.customData = { propType: 'balloon', radius: r, spriteKey: 'BALLOON', scale, buoyant: true };
-    } else if (propType === 'EXAM_SHEET' || propType === 'EXAM_BLIZZARD') {
-      const scale = params.scale || 3;
-      const w = 16 * scale;
-      const h = 18 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 1.5,
-        frictionAir: 0.12,
-        restitution: 0.2,
-        label: 'prop_exam_sheet'
-      });
-      body.customData = { propType: 'exam_sheet', width: w, height: h, spriteKey: 'EXAM_SHEET', scale, flutter: true };
-    } else if (propType === 'DEER' || propType === 'STAMPEDE_DEER') {
-      const scale = params.scale || 3.5;
-      const w = 18 * scale;
       const h = 16 * scale;
       body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 180,
-        restitution: 0.2,
-        friction: 0.4,
-        label: 'prop_deer'
+        mass: params.mass || 150,
+        restitution: 0.1,
+        friction: 0.8,
+        label: `prop_${rawProp.toLowerCase()}`
       });
-      body.customData = { propType: 'deer', width: w, height: h, spriteKey: 'HORNED_DEER', scale, charge: true };
-    } else if (propType === 'GIANT_SANDWICH' || propType === 'DAGWOOD_SUB') {
-      const scale = params.scale || 4.5;
-      const w = 18 * scale;
-      const h = 16 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 400,
-        restitution: 0.05,
-        friction: 0.9,
-        label: 'prop_sandwich'
-      });
-      body.customData = { propType: 'sandwich', width: w, height: h, spriteKey: 'GIANT_SANDWICH', scale };
-    } else if (propType === 'SPORTS_CAR') {
-      const scale = params.scale || 4;
-      const w = 24 * scale;
-      const h = 12 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 450,
-        restitution: 0.2,
-        friction: 0.7,
-        label: 'prop_car'
-      });
-      body.customData = { propType: 'car', width: w, height: h, spriteKey: 'SPORTS_CAR', scale };
-    } else if (propType === 'TUNGSTEN_SARCOPHAGUS') {
-      const scale = params.scale || 4.5;
-      const w = 18 * scale;
-      const h = 24 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 850,
-        restitution: 0.05,
-        friction: 0.9,
-        label: 'prop_sarcophagus'
-      });
-      body.customData = { propType: 'sarcophagus', width: w, height: h, spriteKey: 'TUNGSTEN_SARCOPHAGUS', scale };
-    } else if (propType === 'SAFE') {
-      const scale = params.scale || 4.5;
-      const w = 18 * scale;
-      const h = 18 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 950,
-        restitution: 0.05,
-        friction: 0.95,
-        label: 'prop_safe'
-      });
-      body.customData = { propType: 'safe', width: w, height: h, spriteKey: 'SAFE', scale };
-    } else if (propType === 'STATUE_FRIEND') {
-      const scale = params.scale || 4.5;
-      const w = 18 * scale;
-      const h = 26 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 650,
-        restitution: 0.08,
-        friction: 0.85,
-        label: 'prop_statue'
-      });
-      body.customData = { propType: 'statue', width: w, height: h, spriteKey: 'STATUE_FRIEND', scale };
-    } else if (propType === 'METEOR') {
-      const scale = params.scale || 4;
-      const r = 10 * scale;
-      body = Bodies.circle(x, y, r, {
-        mass: params.mass || 320,
-        restitution: 0.2,
-        friction: 0.6,
-        label: 'prop_meteor'
-      });
-      body.customData = { propType: 'meteor', radius: r, spriteKey: 'METEOR', scale };
+      body.customData = { propType: 'custom_sprite', spriteKey: rawProp, width: w, height: h, scale };
     } else {
       // Fallback
       body = Bodies.rectangle(x, y, 40, 40, {
