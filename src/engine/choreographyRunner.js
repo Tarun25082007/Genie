@@ -19,9 +19,12 @@ export class ChoreographyRunner {
 
     // World Modifiers
     this.worldModifiers = {
+      gravityActive: false,
       gravity: { x: 0, y: 1.0 },
+      gravityRestoreAtMs: null,
       deleteFloor: false,
       blackHole: null,
+      blackHoleRestoreAtMs: null,
       ceilingSpikes: false
     };
 
@@ -53,9 +56,12 @@ export class ChoreographyRunner {
     };
 
     this.worldModifiers = {
+      gravityActive: false,
       gravity: { x: 0, y: 1.0 },
+      gravityRestoreAtMs: null,
       deleteFloor: false,
       blackHole: null,
+      blackHoleRestoreAtMs: null,
       ceilingSpikes: false
     };
 
@@ -102,10 +108,27 @@ export class ChoreographyRunner {
       this.executeVerb(event);
     }
 
+    // Auto-restore temporary gravity inversion / anti-gravity overrides so models fall back down
+    if (this.worldModifiers.gravityActive && this.worldModifiers.gravityRestoreAtMs !== null && this.elapsedMs >= this.worldModifiers.gravityRestoreAtMs) {
+      this.worldModifiers.gravityActive = false;
+      this.worldModifiers.gravity = { x: 0, y: 1.0 };
+      this.worldModifiers.gravityRestoreAtMs = null;
+    }
+    if (this.worldModifiers.blackHole && this.worldModifiers.blackHoleRestoreAtMs !== null && this.elapsedMs >= this.worldModifiers.blackHoleRestoreAtMs) {
+      this.worldModifiers.blackHole = null;
+      this.worldModifiers.blackHoleRestoreAtMs = null;
+    }
+
     // Completion check
     const maxTime = 4500;
     if (this.timeline.length === 0 && this.elapsedMs > maxTime) {
       this.isPlaying = false;
+      // Ensure negative gravity / singularity never stays stuck permanently after scenario completes
+      this.worldModifiers.gravityActive = false;
+      this.worldModifiers.gravity = { x: 0, y: 1.0 };
+      this.worldModifiers.gravityRestoreAtMs = null;
+      this.worldModifiers.blackHole = null;
+      this.worldModifiers.blackHoleRestoreAtMs = null;
       if (this.handlers.onWishCompleted && this.currentScenario) {
         this.handlers.onWishCompleted(this.currentScenario);
       }
@@ -176,20 +199,24 @@ export class ChoreographyRunner {
     const { modifier } = params;
 
     if (modifier === 'GRAVITY') {
-      this.worldModifiers.gravity = {
-        x: params.gravity_x ?? 0,
-        y: params.gravity_y ?? 1.0
-      };
+      const gy = params.gravity_y ?? 1.0;
+      const gx = params.gravity_x ?? 0;
+      const duration = typeof params.duration_ms === 'number' ? params.duration_ms : 2600;
+      this.worldModifiers.gravityActive = true;
+      this.worldModifiers.gravity = { x: gx, y: gy };
+      this.worldModifiers.gravityRestoreAtMs = this.elapsedMs + duration;
       audioSynth.playLaser();
     } else if (modifier === 'DELETE_FLOOR') {
       this.worldModifiers.deleteFloor = true;
       audioSynth.playExplosion();
     } else if (modifier === 'BLACK_HOLE') {
+      const duration = typeof params.duration_ms === 'number' ? params.duration_ms : 2800;
       this.worldModifiers.blackHole = {
         x: params.x || 480,
         y: params.y || 250,
         strength: params.strength || 0.008
       };
+      this.worldModifiers.blackHoleRestoreAtMs = this.elapsedMs + duration;
       audioSynth.playExplosion();
     } else if (modifier === 'CEILING_SPIKES') {
       this.worldModifiers.ceilingSpikes = true;
@@ -232,9 +259,12 @@ export class ChoreographyRunner {
       crtGlitch: 0
     };
     this.worldModifiers = {
+      gravityActive: false,
       gravity: { x: 0, y: 1.0 },
+      gravityRestoreAtMs: null,
       deleteFloor: false,
       blackHole: null,
+      blackHoleRestoreAtMs: null,
       ceilingSpikes: false
     };
   }

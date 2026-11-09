@@ -37,6 +37,11 @@ export default function GameCanvas({
   const activeConstraintsRef = useRef([]);
   const animFrameRef = useRef(null);
   const prevWishNumberRef = useRef(wishNumber);
+  const settingsRef = useRef(settings);
+
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   // Animated Genie State (floats at x = 220, y = 220)
   const genieAnimRef = useRef({
@@ -78,6 +83,10 @@ export default function GameCanvas({
       cellularGridRef.current.clear();
     }
 
+    // Ensure gravity resets back to normal downward pull
+    engine.gravity.x = 0;
+    engine.gravity.y = settingsRef.current?.gravity ?? 1.0;
+
     // Resurrect player ragdoll as a living, pristine human
     if (ragdollRef.current) {
       ragdollRef.current.resurrect(480, 440, custom);
@@ -93,12 +102,12 @@ export default function GameCanvas({
     });
     engineRef.current = engine;
 
-    // Chamber Walls (Exact Coordinates: 0..36px left/top, 924..960px right, floor surface at y = 504px)
+    // Chamber Walls (Exact Inner Arena: x=36..924, y=36..504; 300px thick to completely prevent high-speed tunneling)
     const wallOpts = { isStatic: true, restitution: 0.2, friction: 0.9, render: { visible: false } };
-    const floor = Bodies.rectangle(CANVAS_WIDTH / 2, 522, CANVAS_WIDTH, 36, wallOpts); // Top surface at y = 504
-    const ceiling = Bodies.rectangle(CANVAS_WIDTH / 2, 18, CANVAS_WIDTH, 36, wallOpts); // Bottom at y = 36
-    const leftWall = Bodies.rectangle(18, CANVAS_HEIGHT / 2, 36, CANVAS_HEIGHT, wallOpts); // Right at x = 36
-    const rightWall = Bodies.rectangle(942, CANVAS_HEIGHT / 2, 36, CANVAS_HEIGHT, wallOpts); // Left at x = 924
+    const floor = Bodies.rectangle(CANVAS_WIDTH / 2, 504 + 150, CANVAS_WIDTH + 600, 300, wallOpts); // Top surface at y = 504
+    const ceiling = Bodies.rectangle(CANVAS_WIDTH / 2, 36 - 150, CANVAS_WIDTH + 600, 300, wallOpts); // Bottom surface at y = 36
+    const leftWall = Bodies.rectangle(36 - 150, CANVAS_HEIGHT / 2, 300, CANVAS_HEIGHT + 600, wallOpts); // Right surface at x = 36
+    const rightWall = Bodies.rectangle(924 + 150, CANVAS_HEIGHT / 2, 300, CANVAS_HEIGHT + 600, wallOpts); // Left surface at x = 924
 
     floorRef.current = floor;
     World.add(engine.world, [floor, ceiling, leftWall, rightWall]);
@@ -272,6 +281,7 @@ export default function GameCanvas({
     if (wishNumber !== prevWishNumberRef.current) {
       prevWishNumberRef.current = wishNumber;
       if (engineRef.current) {
+        choreographyRunner.reset();
         resetSandboxStage(engineRef.current, customization);
       }
     }
@@ -330,8 +340,8 @@ export default function GameCanvas({
 
       // Apply Persistent World Modifiers
       if (engine) {
-        engine.gravity.x = mods.gravity.x;
-        engine.gravity.y = mods.gravity.y;
+        engine.gravity.x = mods.gravityActive ? mods.gravity.x : 0;
+        engine.gravity.y = mods.gravityActive ? mods.gravity.y : (settingsRef.current?.gravity ?? 1.0);
 
         // BLACK_HOLE: Accretion disk attractive force + spaghettification
         if (mods.blackHole) {
@@ -448,13 +458,13 @@ export default function GameCanvas({
 
           if (b.customData?.buoyant) {
             Body.applyForce(b, b.position, {
-              x: Math.sin(currentTime * 0.003) * 0.0015,
-              y: -0.012 * (b.mass || 1)
+              x: Math.sin(currentTime * 0.003) * 0.0004 * (b.mass || 1),
+              y: -0.00125 * (b.mass || 1)
             });
           } else if (b.customData?.flutter) {
             Body.applyForce(b, b.position, {
-              x: Math.sin(currentTime * 0.008 + b.position.y * 0.05) * 0.002,
-              y: -0.003 * (b.mass || 1)
+              x: Math.sin(currentTime * 0.008 + b.position.y * 0.05) * 0.0005 * (b.mass || 1),
+              y: -0.00065 * (b.mass || 1)
             });
           } else if (b.customData?.charge) {
             Body.applyForce(b, b.position, {
@@ -463,7 +473,47 @@ export default function GameCanvas({
             });
           }
         });
-        Engine.update(engine, dt * 1000);
+
+        // Fixed <=16.67ms sub-stepping for rock-solid constraint stability
+        let remainingMs = dt * 1000;
+        const stepMs = 1000 / 60;
+        while (remainingMs > 0) {
+          const curStep = Math.min(stepMs, remainingMs);
+          Engine.update(engine, curStep);
+          remainingMs -= curStep;
+        }
+
+        // Safety clamp: keep ragdoll parts inside the visible arena (unless floor deleted)
+        Object.values(ragdoll?.parts || {}).forEach((b) => {
+          if (!b || b.isStatic) return;
+          let clamped = false;
+          let nx = b.position.x;
+          let ny = b.position.y;
+          let vx = b.velocity.x;
+          let vy = b.velocity.y;
+
+          if (nx < 42) { nx = 42; vx = Math.abs(vx) * 0.3; clamped = true; }
+          if (nx > 918) { nx = 918; vx = -Math.abs(vx) * 0.3; clamped = true; }
+          if (ny < 44) { ny = 44; vy = Math.max(0, Math.abs(vy) * 0.25); clamped = true; }
+          if (!mods.deleteFloor && ny > 498) { ny = 498; vy = Math.min(0, -Math.abs(vy) * 0.2); clamped = true; }
+
+          if (clamped) {
+            Body.setPosition(b, { x: nx, y: ny });
+            Body.setVelocity(b, { x: vx, y: vy });
+          }
+        });
+
+        // Prevent props from vertically escaping above ceiling or tunneling past floor
+        propsRef.current.forEach((b) => {
+          if (!b || b.isStatic) return;
+          if (b.position.y < 38) {
+            Body.setPosition(b, { x: b.position.x, y: 38 });
+            Body.setVelocity(b, { x: b.velocity.x, y: Math.max(0, Math.abs(b.velocity.y) * 0.2) });
+          } else if (!mods.deleteFloor && b.position.y > 504) {
+            Body.setPosition(b, { x: b.position.x, y: 500 });
+            Body.setVelocity(b, { x: b.velocity.x, y: Math.min(0, b.velocity.y) });
+          }
+        });
       }
 
       // 3. Update Ragdoll Stress Severing, Stumps & Posture (with overhead danger tracking)

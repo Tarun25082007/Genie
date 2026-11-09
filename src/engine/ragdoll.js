@@ -382,23 +382,34 @@ export class PlayerRagdoll {
     const rightLeg = this.parts.rightLeg;
     if (!torso || !head) return;
 
-    // 1. Upright torso & head balance torque
-    torso.torque = -torso.angle * 0.16;
-    head.torque = -head.angle * 0.12;
+    const legsIntact =
+      leftLeg &&
+      rightLeg &&
+      !this.constraints.leftHip?.isBroken &&
+      !this.constraints.rightHip?.isBroken;
 
-    // 2. Active vertical standing spring (floor at y = 504, standing torso at y ~ 438)
-    if (torso.position.y > 425 && torso.position.y < 495) {
-      const targetY = 438;
+    const legsOnFloor =
+      legsIntact && (leftLeg.position.y > 466 || rightLeg.position.y > 466);
+
+    // 1. Upright torso & head balance torque (gently scaled so it never explodes)
+    torso.torque = -torso.angle * 0.08;
+    head.torque = -head.angle * 0.06;
+
+    // 2. Active vertical standing spring (ONLY when legs are intact and resting near the floor)
+    // Matter.js gravity force per unit mass is ~0.001 at 1G; clamp strictly so ragdoll never rockets upward
+    if (legsOnFloor && torso.position.y > 432 && torso.position.y < 495 && Math.abs(torso.velocity.y) < 6) {
+      const targetY = 440;
       const dy = targetY - torso.position.y;
       const vy = torso.velocity.y;
-      const liftForce = (dy * 0.008) - (vy * 0.0035);
-      Body.applyForce(torso, torso.position, { x: 0, y: liftForce * (torso.mass || 4.5) });
+      const rawLift = (dy * 0.00012) - (vy * 0.00025);
+      const clampedLift = Math.max(-0.0016, Math.min(0.0006, rawLift));
+      Body.applyForce(torso, torso.position, { x: 0, y: clampedLift * (torso.mass || 4.9) });
     }
 
     // 3. Legs posture & horizontal stance stabilization
-    if (leftLeg && rightLeg) {
-      leftLeg.torque = -leftLeg.angle * 0.08;
-      rightLeg.torque = -rightLeg.angle * 0.08;
+    if (legsIntact) {
+      leftLeg.torque = -leftLeg.angle * 0.05;
+      rightLeg.torque = -rightLeg.angle * 0.05;
 
       // Keep feet planted horizontally under hips when on the floor
       if (leftLeg.position.y > 470) {
@@ -411,13 +422,13 @@ export class PlayerRagdoll {
 
     // 4. Subtle idle breath sway when sane, manic twitches when insane
     if (this.sanityStage === 'SANE') {
-      const idleSway = Math.sin(this.breathCycle) * 0.00018;
+      const idleSway = Math.sin(this.breathCycle) * 0.00015;
       Body.applyForce(torso, torso.position, { x: idleSway, y: 0 });
     } else if (this.sanityStage === 'INSANE') {
       if (Math.random() < 0.28) {
         Body.applyForce(torso, torso.position, {
-          x: (Math.random() - 0.5) * 0.0022,
-          y: (Math.random() - 0.5) * 0.0012
+          x: (Math.random() - 0.5) * 0.0015,
+          y: Math.random() * 0.0006
         });
       }
     }
