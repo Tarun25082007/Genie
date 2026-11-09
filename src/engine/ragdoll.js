@@ -93,7 +93,7 @@ export class PlayerRagdoll {
     if (caEngine && this.parts.torso) {
       const gx = Math.floor(this.parts.torso.position.x / 3);
       const gy = Math.floor(this.parts.torso.position.y / 3);
-      caEngine.spawnCircle(gx, gy, 8, CELL_TYPES.BLOOD, 6);
+      caEngine.spawnCircleGrid(gx, gy, 8, CELL_TYPES.BLOOD, 6);
     }
   }
 
@@ -247,52 +247,49 @@ export class PlayerRagdoll {
   }
 
   initRagdoll(x, y) {
+    this.startX = x;
+    this.startY = y;
+    const dy = y - 440;
     const group = -1;
 
-    // Exact Body Geometry according to Section 4.3:
-    // head: rectangle(480, 400, 24, 24)
-    // torso: rectangle(480, 438, 28, 44)
-    // leftArm: rectangle(456, 436, 12, 36)
-    // rightArm: rectangle(504, 436, 12, 36)
-    // leftLeg: rectangle(472, 482, 12, 40)
-    // rightLeg: rectangle(488, 482, 12, 40)
+    // Exact Body Geometry anchored relative to (x, y), matching 480, 440 defaults
     this.parts = {
-      head: Bodies.rectangle(x, 400, 24, 24, {
+      head: Bodies.rectangle(x, 400 + dy, 24, 24, {
         collisionFilter: { group },
         density: 0.002,
         friction: 0.5,
         restitution: 0.2,
         label: 'ragdoll_head'
       }),
-      torso: Bodies.rectangle(x, 438, 28, 44, {
+      torso: Bodies.rectangle(x, 438 + dy, 28, 44, {
         collisionFilter: { group },
         density: 0.004,
         friction: 0.6,
         restitution: 0.1,
         label: 'ragdoll_torso'
       }),
-      leftArm: Bodies.rectangle(x - 24, 436, 12, 36, {
+      leftArm: Bodies.rectangle(x - 24, 436 + dy, 12, 36, {
         collisionFilter: { group },
         density: 0.0015,
         friction: 0.4,
         restitution: 0.1,
         label: 'ragdoll_leftArm'
       }),
-      rightArm: Bodies.rectangle(x + 24, 436, 12, 36, {
+      rightArm: Bodies.rectangle(x + 24, 436 + dy, 12, 36, {
         collisionFilter: { group },
         density: 0.0015,
         friction: 0.4,
         restitution: 0.1,
         label: 'ragdoll_rightArm'
       }),
-      leftLeg: Bodies.rectangle(x - 8, 482, 12, 40, {
+      leftLeg: Bodies.rectangle(x - 8, 482 + dy, 12, 40, {
         collisionFilter: { group },
         density: 0.0025,
         friction: 0.8,
         restitution: 0.1,
         label: 'ragdoll_leftLeg'
       }),
-      rightLeg: Bodies.rectangle(x + 8, 482, 12, 40, {
+      rightLeg: Bodies.rectangle(x + 8, 482 + dy, 12, 40, {
         collisionFilter: { group },
         density: 0.0025,
         friction: 0.8,
@@ -389,7 +386,7 @@ export class PlayerRagdoll {
       !this.constraints.rightHip?.isBroken;
 
     const legsOnFloor =
-      legsIntact && (leftLeg.position.y > 466 || rightLeg.position.y > 466);
+      legsIntact && (leftLeg.position.y > this.startY + 26 || rightLeg.position.y > this.startY + 26);
 
     // 1. Upright torso & head balance torque (gently scaled so it never explodes)
     torso.torque = -torso.angle * 0.08;
@@ -397,8 +394,8 @@ export class PlayerRagdoll {
 
     // 2. Active vertical standing spring (ONLY when legs are intact and resting near the floor)
     // Matter.js gravity force per unit mass is ~0.001 at 1G; clamp strictly so ragdoll never rockets upward
-    if (legsOnFloor && torso.position.y > 432 && torso.position.y < 495 && Math.abs(torso.velocity.y) < 6) {
-      const targetY = 440;
+    if (legsOnFloor && torso.position.y > this.startY - 8 && torso.position.y < this.startY + 55 && Math.abs(torso.velocity.y) < 6) {
+      const targetY = this.startY;
       const dy = targetY - torso.position.y;
       const vy = torso.velocity.y;
       const rawLift = (dy * 0.00012) - (vy * 0.00025);
@@ -412,10 +409,10 @@ export class PlayerRagdoll {
       rightLeg.torque = -rightLeg.angle * 0.05;
 
       // Keep feet planted horizontally under hips when on the floor
-      if (leftLeg.position.y > 470) {
+      if (leftLeg.position.y > this.startY + 30) {
         Body.setVelocity(leftLeg, { x: leftLeg.velocity.x * 0.85, y: leftLeg.velocity.y });
       }
-      if (rightLeg.position.y > 470) {
+      if (rightLeg.position.y > this.startY + 30) {
         Body.setVelocity(rightLeg, { x: rightLeg.velocity.x * 0.85, y: rightLeg.velocity.y });
       }
     }
@@ -547,7 +544,7 @@ export class PlayerRagdoll {
       vfxSystem.spawnFloatingText(bodyA.position.x, bodyA.position.y - 12, 'CRUNCH!', '#ffd166', 15);
       vfxSystem.triggerHitStop(2);
 
-      if (jointName === 'neck') {
+      if (targetJoint === 'neck') {
         this.isDead = true;
         vfxSystem.spawnSoul(bodyA.position.x, bodyA.position.y);
         vfxSystem.spawnFloatingText(bodyA.position.x, bodyA.position.y - 30, '-999,999', '#ef233c', 18);
@@ -574,17 +571,27 @@ export class PlayerRagdoll {
   // MUTATE_PART Atomic Verb
   mutatePart(params, caEngine = null, synth = audioSynth) {
     const { part, scale_x = 1.0, scale_y = 1.0, tint, explode_if_scale_above = 2.4 } = params;
+    const safeSx = Number.isFinite(scale_x) && scale_x > 0 ? Math.max(0.25, Math.min(3.5, scale_x)) : 1.0;
+    const safeSy = Number.isFinite(scale_y) && scale_y > 0 ? Math.max(0.25, Math.min(3.5, scale_y)) : 1.0;
 
     const mutateSingle = (bodyKey) => {
       const body = this.parts[bodyKey];
       if (!body) return;
 
-      Body.scale(body, scale_x, scale_y);
+      const curW = Math.abs(body.bounds.max.x - body.bounds.min.x);
+      const curH = Math.abs(body.bounds.max.y - body.bounds.min.y);
+      const nextW = curW * safeSx;
+      const nextH = curH * safeSy;
+
+      // Guard Matter.js Body.scale against shrinking to a degenerate 0-area sliver or exploding bounds
+      if (nextW >= 6 && nextH >= 6 && nextW <= 320 && nextH <= 320 && (safeSx !== 1.0 || safeSy !== 1.0)) {
+        Body.scale(body, safeSx, safeSy);
+      }
       if (tint) {
         this.partTints[bodyKey] = tint;
       }
 
-      if (Math.max(scale_x, scale_y) >= explode_if_scale_above) {
+      if (Math.max(safeSx, safeSy) >= explode_if_scale_above) {
         this.explodePart(bodyKey, caEngine, synth);
       }
     };
@@ -677,10 +684,10 @@ export class PlayerRagdoll {
       partKey = bodyOrIdx;
     } else if (typeof bodyOrIdx === 'object' && bodyOrIdx?.label) {
       partKey = bodyOrIdx.label.replace('ragdoll_', '');
-    } else {
-      // Find body by index
+    } else if (typeof bodyOrIdx === 'number') {
       const keys = Object.keys(this.parts);
-      partKey = keys[bodyOrIdx % keys.length];
+      if (bodyOrIdx < 0 || bodyOrIdx >= keys.length) return;
+      partKey = keys[bodyOrIdx];
     }
 
     if (partKey && this.acidCorrosion[partKey] !== undefined) {
@@ -695,6 +702,9 @@ export class PlayerRagdoll {
 
   // Downward force from piles of gold resting on ragdoll
   onGoldWeight(bodyOrIdx, force = 0.00045) {
+    if (typeof bodyOrIdx === 'number' && (bodyOrIdx < 0 || bodyOrIdx >= Object.keys(this.parts).length)) {
+      return;
+    }
     const target = this.parts.torso || this.parts.head;
     if (target) {
       Body.applyForce(target, target.position, { x: 0, y: force });
@@ -804,7 +814,7 @@ export class PlayerRagdoll {
             const gx = Math.floor(wx * scaleX);
             const gy = Math.floor(wy * scaleY);
 
-            cellularGrid.spawnCircle(gx, gy, 3, CELL_TYPES.BLOOD, 2);
+            cellularGrid.spawnCircleGrid(gx, gy, 3, CELL_TYPES.BLOOD, 2);
 
             if (stump.bloodTicks % 30 === 0) {
               audioSynth.playBloodSpray();

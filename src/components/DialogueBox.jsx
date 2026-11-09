@@ -1,6 +1,7 @@
 // Akinator-Style Typewriter Dialogue with Synced Voice Blips, Loophole Meter & Non-Obstructive HUD
 import React, { useState, useEffect, useRef } from 'react';
 import { audioSynth } from '../engine/audioSynth';
+import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import {
   ShieldAlert,
   Scale,
@@ -20,7 +21,7 @@ export default function DialogueBox({ dialogue, theme, onDismiss, isExecuting = 
   const [showLegalBreakdown, setShowLegalBreakdown] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [positionMode, setPositionMode] = useState(() => {
-    return localStorage.getItem('genie_dialogue_pos') || 'top-right';
+    return safeGetItem('genie_dialogue_pos') || 'top-right';
   });
 
   const typingTimerRef = useRef(null);
@@ -89,7 +90,7 @@ export default function DialogueBox({ dialogue, theme, onDismiss, isExecuting = 
     const nextIdx = (modes.indexOf(positionMode) + 1) % modes.length;
     const nextMode = modes[nextIdx];
     setPositionMode(nextMode);
-    localStorage.setItem('genie_dialogue_pos', nextMode);
+    safeSetItem('genie_dialogue_pos', nextMode);
   };
 
   if (!dialogue || !fullText) return null;
@@ -146,6 +147,7 @@ export default function DialogueBox({ dialogue, theme, onDismiss, isExecuting = 
                 e.stopPropagation();
                 setIsMinimized(false);
               }}
+              aria-label="Expand dialogue"
               title="Expand Dialogue"
               className="p-1 rounded bg-black/40 hover:bg-black/60 text-slate-300 hover:text-white"
             >
@@ -158,6 +160,7 @@ export default function DialogueBox({ dialogue, theme, onDismiss, isExecuting = 
                   e.stopPropagation();
                   onDismiss();
                 }}
+                aria-label="Dismiss dialogue"
                 title="Dismiss"
                 className="p-1 rounded bg-black/40 hover:bg-black/60 text-slate-300 hover:text-white"
               >
@@ -246,6 +249,7 @@ export default function DialogueBox({ dialogue, theme, onDismiss, isExecuting = 
             <button
               type="button"
               onClick={cyclePosition}
+              aria-label={`Cycle dialogue dock position (${positionMode})`}
               title={`Dock Position: ${positionMode.toUpperCase()} (Click to cycle)`}
               className="p-1 rounded bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors"
             >
@@ -259,6 +263,7 @@ export default function DialogueBox({ dialogue, theme, onDismiss, isExecuting = 
                 e.stopPropagation();
                 setIsMinimized(true);
               }}
+              aria-label="Minimize dialogue"
               title="Minimize Dialogue"
               className="p-1 rounded bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors"
             >
@@ -273,6 +278,7 @@ export default function DialogueBox({ dialogue, theme, onDismiss, isExecuting = 
                   e.stopPropagation();
                   onDismiss();
                 }}
+                aria-label="Dismiss dialogue"
                 title="Dismiss Dialogue"
                 className="p-1 rounded bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-colors"
               >
@@ -287,7 +293,7 @@ export default function DialogueBox({ dialogue, theme, onDismiss, isExecuting = 
           <div
             className="h-full transition-all duration-500 rounded-full"
             style={{
-              width: `${loopholeScore}%`,
+              width: `${Math.max(0, Math.min(100, Number(loopholeScore) || 0))}%`,
               backgroundColor: scoreColor,
               boxShadow: `0 0 8px ${scoreColor}`
             }}

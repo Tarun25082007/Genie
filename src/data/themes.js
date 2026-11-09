@@ -1,4 +1,5 @@
 // Multi-Theme & Entity Variant System + Extensible Custom Theme Engine + 16x16 Pixel Sprites
+import { safeGetItem, safeSetItem } from '../utils/safeStorage.js';
 
 export const THEME_SETS = {
   shenron_dragon: {
@@ -791,8 +792,8 @@ export const PIXEL_SPRITES = {
       '.dDDDDrRRrDDDDd.',
       'dDDDDDrRRrDDDDDd',
       'dDDDrrRRRRrrDDDd',
-      'dDDDrRWWWW RrDDDd',
-      'dDDDrRWWWW RrDDDd',
+      'dDDDrRWWWWRrDDDd',
+      'dDDDrRWWWWRrDDDd',
       'dDDDrrRRRRrrDDDd',
       'dDDDDDrRRrDDDDDd',
       '.dDDDDrRRrDDDDd.',
@@ -982,7 +983,7 @@ export const PIXEL_SPRITES = {
       '..Wb........wW..',
       '..Wb.RRR....wW..',
       '..Wb.R......wW..',
-      '..Wb.RR..-..wW..',
+      '..Wb.RR..D..wW..',
       '..Wb.R......wW..',
       '..Wb.R......wW..',
       '..Wb........wW..',
@@ -1064,6 +1065,7 @@ export const PIXEL_SPRITES = {
       'G': '#38bdf8',
       'k': '#111827',
       'S': '#94a3b8',
+      's': '#cbd5e1',
       'Y': '#fde047'
     },
     matrix: [
@@ -1210,17 +1212,17 @@ export const PIXEL_SPRITES = {
     matrix: [
       '..cccccccccccc..',
       '.cDDDDDDDDDDDDc.',
-      '.cDCWWCDDDCWWCDc.',
-      '.cDCWWCDDDCWWCDc.',
-      '.cDCCCCDDCCCCCDc.',
+      '.cDCWWCDDCWWCDc.',
+      '.cDCWWCDDCWWCDc.',
+      '.cDCCCCDDCCCCDc.',
       '.cDDDDMMMMDDDDc.',
       '.cDDDDMMMMDDDDc.',
-      '.cDCcDcDcDcDcCDc.',
-      '.cDCcDcDcDcDcCDc.',
+      '.cDCcDcDDcDcCDc.',
+      '.cDCcDcDDcDcCDc.',
       '.cDDDDMMMMDDDDc.',
-      '.cDCCCCDDCCCCCDc.',
-      '.cDCWWCDDDCWWCDc.',
-      '.cDCWWCDDDCWWCDc.',
+      '.cDCCCCDDCCCCDc.',
+      '.cDCWWCDDCWWCDc.',
+      '.cDCWWCDDCWWCDc.',
       '.cDDDDDDDDDDDDc.',
       '..cccccccccccc..',
       '................'
@@ -1281,6 +1283,34 @@ export const PIXEL_SPRITES = {
       '.......DD.......',
       '......SDDS......'
     ]
+  },
+  ANVIL: {
+    palette: {
+      '.': null,
+      'D': '#0f172a',
+      'I': '#334155',
+      'S': '#64748b',
+      'L': '#94a3b8',
+      'W': '#e2e8f0'
+    },
+    matrix: [
+      '................',
+      '................',
+      '................',
+      '..DDDDDDDDDDDD..',
+      '.DILLLLLLLLLLID.',
+      'DDISSSSSSSSSSIDD',
+      'DIIISSSSSSSSIIID',
+      '.DDDIIIIIIIIIDDD',
+      '....DIIIIIIID...',
+      '....DIIIIIIID...',
+      '....DIIIIIIID...',
+      '...DDIIIIIIIDD..',
+      '..DDIIIIIIIIIID.',
+      '.DSSSSSSSSSSSSSD',
+      '.DDDDDDDDDDDDDD.',
+      '................'
+    ]
   }
 };
 
@@ -1318,9 +1348,12 @@ export function drawPixelSprite(ctx, spriteKey, x, y, size = 32, flipX = false) 
 export function getAvailableThemes() {
   let custom = {};
   try {
-    const stored = localStorage.getItem('genie_custom_themes');
+    const stored = safeGetItem('genie_custom_themes');
     if (stored) {
-      custom = JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        custom = parsed;
+      }
     }
   } catch (err) {
     console.warn('Failed to load custom themes from localStorage:', err);
@@ -1346,7 +1379,7 @@ export function saveCustomTheme(themeObj) {
     });
 
     storedCustoms[themeObj.id] = themeObj;
-    localStorage.setItem('genie_custom_themes', JSON.stringify(storedCustoms));
+    safeSetItem('genie_custom_themes', JSON.stringify(storedCustoms));
     return true;
   } catch (err) {
     console.error('Failed to save custom theme:', err);
@@ -1360,12 +1393,14 @@ export function saveCustomTheme(themeObj) {
 export function deleteCustomTheme(themeId) {
   if (THEME_SETS[themeId]) return false; // Prevent deleting core themes
   try {
-    const stored = localStorage.getItem('genie_custom_themes');
+    const stored = safeGetItem('genie_custom_themes');
     if (stored) {
       const parsed = JSON.parse(stored);
-      delete parsed[themeId];
-      localStorage.setItem('genie_custom_themes', JSON.stringify(parsed));
-      return true;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        delete parsed[themeId];
+        safeSetItem('genie_custom_themes', JSON.stringify(parsed));
+        return true;
+      }
     }
   } catch (err) {
     console.error('Failed to delete custom theme:', err);

@@ -86,22 +86,24 @@ export default function WishInputBar({
       >
         {/* Wish Orb Counter Badge */}
         <div
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/60 border border-slate-800 shrink-0"
+          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-black/60 border border-slate-800 shrink-0"
           title={`Wish ${wishNumber} of ${maxWishes} (${remainingOrbs} remaining)`}
         >
-          <Sparkles className="w-3.5 h-3.5" style={{ color: theme?.chamberColors?.accentHex || '#ffd166' }} />
+          <Sparkles className="w-3.5 h-3.5 shrink-0" style={{ color: theme?.chamberColors?.accentHex || '#ffd166' }} />
           <div className="flex gap-1 items-center">
-            {Array.from({ length: maxWishes }).map((_, i) => (
-              <CircleDot
-                key={i}
-                className="w-3 h-3 transition-all"
-                style={{
-                  color: i < remainingOrbs ? theme?.chamberColors?.accentHex || '#ffd166' : '#475569',
-                  opacity: i < remainingOrbs ? 1 : 0.35
-                }}
-              />
-            ))}
-            <span className="text-[10px] text-slate-400 font-pixel ml-1 font-bold">
+            <div className="hidden sm:flex gap-1 items-center">
+              {Array.from({ length: maxWishes }).map((_, i) => (
+                <CircleDot
+                  key={i}
+                  className="w-3 h-3 transition-all"
+                  style={{
+                    color: i < remainingOrbs ? theme?.chamberColors?.accentHex || '#ffd166' : '#475569',
+                    opacity: i < remainingOrbs ? 1 : 0.35
+                  }}
+                />
+              ))}
+            </div>
+            <span className="text-[10px] text-slate-400 font-pixel sm:ml-1 font-bold">
               {wishNumber}/{maxWishes}
             </span>
           </div>
@@ -109,9 +111,9 @@ export default function WishInputBar({
 
         {/* Live Execution Indicator OR Text Input Field */}
         {isExecuting ? (
-          <div className="flex-1 flex items-center justify-center gap-2 py-1.5 px-3 rounded-xl bg-black/40 border border-amber-400/30 text-xs font-pixel text-amber-300 animate-pulse">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
-            <span className="tracking-wider uppercase font-bold">
+          <div className="flex-1 min-w-0 flex items-center justify-center gap-2 py-1.5 px-3 rounded-xl bg-black/40 border border-amber-400/30 text-xs font-pixel text-amber-300 animate-pulse">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin shrink-0" />
+            <span className="tracking-wider uppercase font-bold truncate">
               Executing Wish Choreography...
             </span>
           </div>
@@ -119,17 +121,19 @@ export default function WishInputBar({
           <>
             <input
               type="text"
+              aria-label="Enter your wish"
               value={wishInput}
               onChange={(e) => setWishInput(e.target.value)}
-              placeholder="Enter your wish (or pick a preset chip above)..."
-              className="flex-1 bg-black/40 border border-slate-700/60 focus:border-amber-400 rounded-xl px-4 py-2 text-xs md:text-sm font-pixel text-slate-100 placeholder:text-slate-500 focus:outline-none transition-colors"
+              placeholder="Enter your wish..."
+              className="flex-1 min-w-0 bg-black/40 border border-slate-700/60 focus:border-amber-400 rounded-xl px-3 sm:px-4 py-2 text-xs md:text-sm font-pixel text-slate-100 placeholder:text-slate-500 focus:outline-none transition-colors"
             />
 
             {/* Submit Grant Button */}
             <button
               type="submit"
+              aria-label="Grant wish"
               disabled={!wishInput.trim()}
-              className="px-4 py-2 rounded-xl font-pixel text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 shadow-lg active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              className="shrink-0 px-3 sm:px-4 py-2 rounded-xl font-pixel text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 shadow-lg active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               style={{
                 backgroundColor: theme?.chamberColors?.accentHex || '#ffd166',
                 color: '#090d1c'
@@ -144,12 +148,13 @@ export default function WishInputBar({
         {/* Reset Sandbox Button */}
         <button
           type="button"
+          aria-label="Reset world and respawn ragdoll"
           onClick={() => {
             audioSynth.playButton();
             onResetSandbox();
           }}
           title="Reset World & Respawn Ragdoll"
-          className="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 transition-colors"
+          className="shrink-0 p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 transition-colors"
         >
           <RotateCcw className="w-4 h-4" />
         </button>

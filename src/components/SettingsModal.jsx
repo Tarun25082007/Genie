@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { audioSynth } from '../engine/audioSynth';
 import { testProviderConnection } from '../services/llmDirector';
 import { getWishCacheStats, clearWishCache } from '../services/wishCache';
-import { Settings, Volume2, VolumeX, Cpu, Key, CheckCircle2, AlertCircle, Loader2, X, Terminal, ExternalLink, Zap, Database, Trash2 } from 'lucide-react';
+import { safeGetItem, safeSetItem } from '../utils/safeStorage';
+import { Settings, Volume2, Cpu, Key, CheckCircle2, AlertCircle, Loader2, X, Terminal, ExternalLink, Zap, Database, Trash2 } from 'lucide-react';
 
 export default function SettingsModal({
   settings,
@@ -26,9 +27,9 @@ export default function SettingsModal({
     audioSynth.playButton();
     let apiKey = settings.credentials?.apiKey;
     if (newProvider === 'gemini') {
-      apiKey = localStorage.getItem('genie_geminiApiKey') || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || apiKey || '';
+      apiKey = safeGetItem('genie_geminiApiKey') || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || apiKey || '';
     } else if (newProvider === 'groq') {
-      apiKey = localStorage.getItem('genie_groqApiKey') || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) || apiKey || '';
+      apiKey = safeGetItem('genie_groqApiKey') || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) || apiKey || '';
     }
 
     const next = {
@@ -40,7 +41,7 @@ export default function SettingsModal({
       }
     };
     onUpdateSettings(next);
-    localStorage.setItem('genie_provider', newProvider);
+    safeSetItem('genie_provider', newProvider);
     setTestStatus(null);
   };
 
@@ -53,10 +54,10 @@ export default function SettingsModal({
       }
     };
     onUpdateSettings(next);
-    localStorage.setItem(`genie_${field}`, val);
+    safeSetItem(`genie_${field}`, val);
     if (field === 'apiKey') {
-      if (settings.provider === 'gemini') localStorage.setItem('genie_geminiApiKey', val);
-      if (settings.provider === 'groq') localStorage.setItem('genie_groqApiKey', val);
+      if (settings.provider === 'gemini') safeSetItem('genie_geminiApiKey', val);
+      if (settings.provider === 'groq') safeSetItem('genie_groqApiKey', val);
     }
   };
 
@@ -106,14 +107,24 @@ export default function SettingsModal({
     onUpdateSettings({ ...settings, isMuted: nextMuted });
   };
 
-  const provider = settings.provider || 'mock';
+  const provider = settings.provider || 'ollama_strong';
   const creds = settings.credentials || {};
   const accent = theme?.chamberColors?.accentHex || '#ffd166';
   const bg = theme?.chamberColors?.bgBottom || '#0f1325';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Engine and Director Settings"
+      onClick={() => {
+        audioSynth.playButton();
+        onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none"
+    >
       <div
+        onClick={(e) => e.stopPropagation()}
         className="w-full max-w-xl rounded-2xl border-2 p-5 shadow-2xl max-h-[92vh] overflow-y-auto"
         style={{
           backgroundColor: bg,
@@ -135,6 +146,8 @@ export default function SettingsModal({
             </div>
           </div>
           <button
+            type="button"
+            aria-label="Close settings modal"
             onClick={() => {
               audioSynth.playButton();
               onClose();
@@ -167,6 +180,7 @@ export default function SettingsModal({
               ].map((p) => (
                 <button
                   key={p.id}
+                  type="button"
                   onClick={() => handleProviderChange(p.id)}
                   className={`px-2 py-2 rounded-lg border text-center transition-all flex flex-col items-center justify-center gap-0.5 ${
                     provider === p.id
@@ -350,7 +364,7 @@ export default function SettingsModal({
             )}
 
             {/* Connection Tester Button & Status Banner */}
-            <div className="pt-2 flex items-center justify-between">
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={handleTestConnection}
@@ -367,16 +381,16 @@ export default function SettingsModal({
 
               {testStatus && !testStatus.loading && (
                 <span
-                  className={`text-[11px] font-bold flex items-center gap-1 ${
+                  className={`text-[11px] font-bold flex items-center gap-1 break-words ${
                     testStatus.success ? 'text-emerald-400' : 'text-rose-400'
                   }`}
                 >
                   {testStatus.success ? (
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                   ) : (
-                    <AlertCircle className="w-3.5 h-3.5" />
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   )}
-                  {testStatus.message}
+                  <span>{testStatus.message}</span>
                 </span>
               )}
             </div>
@@ -389,6 +403,7 @@ export default function SettingsModal({
                 <Volume2 className="w-4 h-4" /> RETRO AUDIO SYNTHESIZER
               </span>
               <button
+                type="button"
                 onClick={handleMuteToggle}
                 className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
                   settings.isMuted
@@ -488,6 +503,7 @@ export default function SettingsModal({
         {/* Footer */}
         <div className="mt-4 pt-3 border-t border-slate-700/60 flex justify-end">
           <button
+            type="button"
             onClick={() => {
               audioSynth.playButton();
               onClose();

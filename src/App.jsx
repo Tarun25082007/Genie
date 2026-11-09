@@ -1,5 +1,5 @@
 // Main Application Shell & Master Orchestrator for GENIE: The 2D Literal Monkey's Paw Sandbox
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import GameCanvas from './components/GameCanvas';
 import DialogueBox from './components/DialogueBox';
@@ -11,33 +11,38 @@ import { audioSynth } from './engine/audioSynth';
 import { choreographyRunner } from './engine/choreographyRunner';
 import { vfxSystem } from './engine/vfxSystem';
 import { interpretWishWithDirector } from './services/llmDirector';
+import { safeGetItem, safeSetItem } from './utils/safeStorage';
 import {
   Palette,
   Settings as SettingsIcon,
   RotateCcw,
   Volume2,
   VolumeX,
-  Sparkles,
-  ShieldAlert,
   Skull,
   Award,
   CheckCircle2,
   X,
   Eye,
-  EyeOff,
   Cpu,
   Zap
 } from 'lucide-react';
 
 export default function App() {
+  const [themes, setThemes] = useState(() => getAvailableThemes());
+
   const [currentThemeId, setCurrentThemeId] = useState(() => {
-    return localStorage.getItem('genie_theme_id') || 'djinn_classic';
+    const initialThemes = getAvailableThemes();
+    const saved = safeGetItem('genie_theme_id');
+    return saved && initialThemes[saved] ? saved : 'djinn_classic';
   });
 
   const [customization, setCustomization] = useState(() => {
+    const initialThemes = getAvailableThemes();
+    const savedId = safeGetItem('genie_theme_id');
+    const initialTheme = (savedId && initialThemes[savedId]) || initialThemes.djinn_classic || THEME_SETS.djinn_classic;
     return {
       player: { ...DEFAULT_CUSTOMIZATION.player },
-      genie: { ...DEFAULT_CUSTOMIZATION.genie }
+      genie: { ...DEFAULT_CUSTOMIZATION.genie, ...(initialTheme.genieDefaults || {}) }
     };
   });
 
@@ -53,24 +58,27 @@ export default function App() {
   const [survivedWishesCount, setSurvivedWishesCount] = useState(0);
   const [resetTrigger, setResetTrigger] = useState(0);
 
+  const victoryTimeoutRef = useRef(null);
+  const lastRunOutcomeRef = useRef(null);
+
   // Settings state
   const [settings, setSettings] = useState(() => {
-    let savedProvider = localStorage.getItem('genie_provider');
+    let savedProvider = safeGetItem('genie_provider');
     if (!savedProvider || savedProvider === 'mock' || savedProvider === 'ollama') {
       savedProvider = 'ollama_strong';
-      localStorage.setItem('genie_provider', 'ollama_strong');
+      safeSetItem('genie_provider', 'ollama_strong');
     }
 
-    let strongModel = localStorage.getItem('genie_ollamaStrongModel');
+    let strongModel = safeGetItem('genie_ollamaStrongModel');
     if (!strongModel || strongModel === 'llama3.3') {
       strongModel = 'qwen2.5:7b';
-      localStorage.setItem('genie_ollamaStrongModel', 'qwen2.5:7b');
+      safeSetItem('genie_ollamaStrongModel', 'qwen2.5:7b');
     }
 
-    let weakModel = localStorage.getItem('genie_ollamaWeakModel');
+    let weakModel = safeGetItem('genie_ollamaWeakModel');
     if (!weakModel || weakModel === 'llama3.2') {
       weakModel = 'llama3.2:3b';
-      localStorage.setItem('genie_ollamaWeakModel', 'llama3.2:3b');
+      safeSetItem('genie_ollamaWeakModel', 'llama3.2:3b');
     }
 
     return {
@@ -81,20 +89,19 @@ export default function App() {
       gravity: 1.0,
       provider: savedProvider,
       credentials: {
-        apiKey: localStorage.getItem('genie_apiKey') || (
+        apiKey: safeGetItem('genie_apiKey') || (
           (savedProvider === 'gemini'
-            ? (localStorage.getItem('genie_geminiApiKey') || import.meta.env?.VITE_GEMINI_API_KEY)
-            : (localStorage.getItem('genie_groqApiKey') || import.meta.env?.VITE_GROQ_API_KEY)) || ''
+            ? (safeGetItem('genie_geminiApiKey') || import.meta.env?.VITE_GEMINI_API_KEY)
+            : (safeGetItem('genie_groqApiKey') || import.meta.env?.VITE_GROQ_API_KEY)) || ''
         ),
-        endpoint: localStorage.getItem('genie_endpoint') || import.meta.env?.VITE_OLLAMA_ENDPOINT || 'http://localhost:11434',
-        model: localStorage.getItem('genie_model') || import.meta.env?.VITE_OLLAMA_MODEL || '',
+        endpoint: safeGetItem('genie_endpoint') || import.meta.env?.VITE_OLLAMA_ENDPOINT || 'http://localhost:11434',
+        model: safeGetItem('genie_model') || import.meta.env?.VITE_OLLAMA_MODEL || '',
         ollamaStrongModel: strongModel,
         ollamaWeakModel: weakModel
       }
     };
   });
 
-  const [themes, setThemes] = useState(() => getAvailableThemes());
   const theme = themes[currentThemeId] || themes.djinn_classic || THEME_SETS.djinn_classic;
   const maxWishes = customization?.genie?.maxWishes || theme.maxWishes || 3;
 
@@ -109,6 +116,31 @@ export default function App() {
       survived: true
     });
   }, [currentThemeId, customization?.genie?.variant]);
+
+  // Global Escape handler for modals & certificate overlay
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      if (isSettingsModalOpen) {
+        setIsSettingsModalOpen(false);
+      } else if (isThemeModalOpen) {
+        setIsThemeModalOpen(false);
+      } else if (activeCertificate && !isCertificateMinimized) {
+        setIsCertificateMinimized(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSettingsModalOpen, isThemeModalOpen, activeCertificate, isCertificateMinimized]);
+
+  // Clear pending victory timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (victoryTimeoutRef.current) {
+        clearTimeout(victoryTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Audio start on first interaction
   useEffect(() => {
@@ -130,18 +162,48 @@ export default function App() {
     };
   }, [currentThemeId]);
 
+  const clearVictoryTimeout = () => {
+    if (victoryTimeoutRef.current) {
+      clearTimeout(victoryTimeoutRef.current);
+      victoryTimeoutRef.current = null;
+    }
+  };
+
   // Wish Submission Handler
   const handleMakeWish = async (wishText) => {
     if (isExecuting) return;
 
+    clearVictoryTimeout();
+
+    // Advance or reset wish progression cleanly if player dismissed minimized pill and typed another wish
+    let effectiveWishNumber = wishNumber;
+    if (lastRunOutcomeRef.current === 'died') {
+      effectiveWishNumber = 1;
+      setWishNumber(1);
+      setSurvivedWishesCount(0);
+    } else if (lastRunOutcomeRef.current === 'survived') {
+      if (wishNumber >= maxWishes) {
+        effectiveWishNumber = 1;
+        setWishNumber(1);
+        setSurvivedWishesCount(0);
+      } else {
+        effectiveWishNumber = wishNumber + 1;
+        setWishNumber(effectiveWishNumber);
+      }
+    }
+    lastRunOutcomeRef.current = null;
+
     setIsExecuting(true);
     setActiveCertificate(null);
+    setIsCertificateMinimized(false);
     vfxSystem.spawnEmote(480, 400, 'QUESTION');
 
+    const strongName = settings.credentials?.ollamaStrongModel || 'qwen2.5:7b';
+    const weakName = settings.credentials?.ollamaWeakModel || 'llama3.2:3b';
     const providerLabel = settings.provider === 'ollama_strong'
-      ? `Local Ollama (${settings.credentials?.ollamaStrongModel || 'llama3.3'})`
+      ? `Local Ollama (${strongName})`
       : settings.provider === 'ollama_weak'
-      ? `Local Ollama (${settings.credentials?.ollamaWeakModel || 'llama3.2'})`
+      ? `Local Ollama (${weakName})`
       : settings.provider === 'groq'
       ? 'Groq Cloud (Llama-3.3)'
       : settings.provider === 'gemini'
@@ -152,7 +214,7 @@ export default function App() {
       speaker: customization?.player?.name || 'Player',
       text: `"${wishText}"`,
       loopholeScore: 90,
-      loopholeExplanation: `[${providerLabel}] Directing newly synthesized choreography & custom pixel sprite...`,
+      loopholeExplanation: `[${providerLabel}] Directing synthesized choreography & custom pixel sprite...`,
       voicePitch: 1.0,
       survived: true
     });
@@ -167,9 +229,9 @@ export default function App() {
           name: customization?.genie?.name || theme.name,
           role: customization?.genie?.role || theme.role,
           personaPrompt: theme.personaPrompt,
-          maxWishes: maxWishes
+          maxWishes
         },
-        wishNumber
+        effectiveWishNumber
       );
 
       if (scenario) {
@@ -177,8 +239,10 @@ export default function App() {
           vfxSystem.spawnFloatingText(480, 360, '⚡ CACHE HIT!', '#38bdf8', 16);
           setCurrentDialogue((prev) => ({
             ...prev,
-            loopholeExplanation: `⚡ [CACHED WISH] Retrieved instantly from persistent local cache (saved from ${scenario.cache_source || 'previous LLM run'})`
+            loopholeExplanation: `⚡ [CACHED WISH] Retrieved instantly from persistent local cache (source: ${scenario.cache_source || 'previous LLM run'})`
           }));
+        } else if (scenario.fallback_used) {
+          vfxSystem.spawnFloatingText(480, 360, '⚙️ PROCEDURAL SYNTH!', '#f59e0b', 16);
         } else {
           vfxSystem.spawnFloatingText(480, 360, '🧠 LLM GENERATED!', '#a855f7', 16);
         }
@@ -194,51 +258,60 @@ export default function App() {
 
   const handleWishCompleted = (scenario) => {
     setIsExecuting(false);
+    setIsCertificateMinimized(false);
     setActiveCertificate(scenario);
 
     if (scenario.survived) {
+      lastRunOutcomeRef.current = 'survived';
       audioSynth.playChime();
       vfxSystem.spawnEmote(480, 400, 'HEART');
       vfxSystem.spawnFloatingText(480, 360, 'AIRTIGHT SURVIVAL!', '#10b981', 18);
-      const newSurvivedCount = survivedWishesCount + 1;
-      setSurvivedWishesCount(newSurvivedCount);
+      setSurvivedWishesCount((prev) => prev + 1);
 
-      // Check if all wishes completed with survival (VICTORY!)
+      // Check if final wish of this run was survived -> VICTORY!
       if (wishNumber >= maxWishes) {
         confetti({
           particleCount: 160,
           spread: 80,
           origin: { y: 0.5 }
         });
-        setTimeout(() => {
+        clearVictoryTimeout();
+        victoryTimeoutRef.current = setTimeout(() => {
           setCurrentDialogue({
             speaker: customization?.genie?.name || theme.name.split(':')[1]?.trim() || theme.name,
             text: customization?.genie?.victoryDialogue || theme.victoryDialogue,
             loopholeScore: 100,
-            loopholeExplanation: 'CONGRATULATIONS: You have beaten the Monkey’s Paw with 100% legal precision!',
+            loopholeExplanation: 'CONGRATULATIONS: You have beaten the Monkey’s Paw across every wish!',
             voicePitch: 1.3,
             survived: true
           });
         }, 1200);
-      } else {
-        setWishNumber(wishNumber + 1);
       }
     } else {
+      lastRunOutcomeRef.current = 'died';
       audioSynth.playLaugh();
       vfxSystem.spawnFloatingText(480, 360, 'WISH TWISTED!', '#ef233c', 18);
-      setWishNumber(1);
-      setSurvivedWishesCount(0);
     }
   };
 
   const handleResetSandbox = () => {
+    clearVictoryTimeout();
+    lastRunOutcomeRef.current = null;
     audioSynth.playButton();
     choreographyRunner.reset();
-    setCurrentDialogue(null);
     setActiveCertificate(null);
+    setIsCertificateMinimized(false);
     setIsExecuting(false);
     setWishNumber(1);
     setSurvivedWishesCount(0);
+    setCurrentDialogue({
+      speaker: customization?.genie?.name || theme.name.split(':')[1]?.trim() || theme.name,
+      text: customization?.genie?.introDialogue || theme.introDialogue,
+      loopholeScore: 100,
+      loopholeExplanation: 'State your wish carefully... or your vessel will be harvested.',
+      voicePitch: 1.0,
+      survived: true
+    });
     setResetTrigger((prev) => prev + 1);
   };
 
@@ -247,53 +320,132 @@ export default function App() {
     const nextProvider = settings.provider === 'ollama_strong' ? 'ollama_weak' : 'ollama_strong';
     const next = { ...settings, provider: nextProvider };
     setSettings(next);
-    localStorage.setItem('genie_provider', nextProvider);
+    safeSetItem('genie_provider', nextProvider);
   };
 
   const handleSelectTheme = (themeId) => {
+    clearVictoryTimeout();
+    lastRunOutcomeRef.current = null;
     const freshThemes = getAvailableThemes();
     setThemes(freshThemes);
     setCurrentThemeId(themeId);
-    localStorage.setItem('genie_theme_id', themeId);
+    safeSetItem('genie_theme_id', themeId);
+    setActiveCertificate(null);
+    setIsCertificateMinimized(false);
     setWishNumber(1);
     setSurvivedWishesCount(0);
+    setResetTrigger((prev) => prev + 1);
   };
+
+  const handleCertificateContinue = () => {
+    if (!activeCertificate) return;
+    audioSynth.playButton();
+    clearVictoryTimeout();
+
+    const wasSurvived = activeCertificate.survived;
+    const completedAll = wasSurvived && wishNumber >= maxWishes;
+    const nextWish = wasSurvived && !completedAll ? wishNumber + 1 : 1;
+
+    lastRunOutcomeRef.current = null;
+    setActiveCertificate(null);
+    setIsCertificateMinimized(false);
+    setIsExecuting(false);
+    setWishNumber(nextWish);
+    if (!wasSurvived || completedAll) {
+      setSurvivedWishesCount(0);
+    }
+
+    setCurrentDialogue({
+      speaker: customization?.genie?.name || theme.name.split(':')[1]?.trim() || theme.name,
+      text: nextWish > 1
+        ? `Wish ${nextWish} of ${maxWishes} awaits, mortal. Mind every clause of your next wish...`
+        : (customization?.genie?.introDialogue || theme.introDialogue),
+      loopholeScore: 100,
+      loopholeExplanation: 'State your wish carefully... or your vessel will be harvested.',
+      voicePitch: 1.0,
+      survived: true
+    });
+    setResetTrigger((prev) => prev + 1);
+  };
+
+  const renderSourceBadge = (cert) => {
+    if (cert.from_cache) {
+      return (
+        <span className="text-[9px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold shrink-0">
+          ⚡ CACHED
+        </span>
+      );
+    }
+    if (cert.fallback_used || cert.generation_source === 'procedural_fallback' || cert.generation_source === 'procedural') {
+      return (
+        <span
+          title={cert.fallback_reason || 'Procedural topic synthesis'}
+          className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shrink-0"
+        >
+          ⚙️ PROCEDURAL
+        </span>
+      );
+    }
+    if (cert.generation_source === 'groq') {
+      return (
+        <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold shrink-0">
+          ☁️ GROQ CLOUD
+        </span>
+      );
+    }
+    if (cert.generation_source === 'gemini') {
+      return (
+        <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold shrink-0">
+          ✨ GEMINI CLOUD
+        </span>
+      );
+    }
+    return (
+      <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold shrink-0">
+        🧠 LOCAL LLM
+      </span>
+    );
+  };
+
+  const strongModelDisplay = settings.credentials?.ollamaStrongModel || 'qwen2.5:7b';
+  const weakModelDisplay = settings.credentials?.ollamaWeakModel || 'llama3.2:3b';
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black text-slate-100 flex flex-col font-pixel select-none">
       {/* ======================================================== */}
       {/* TOP HUD BAR & CONTROLS                                   */}
       {/* ======================================================== */}
-      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-3 md:px-5 py-2.5 bg-black/60 backdrop-blur-md border-b border-slate-800">
+      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between gap-2 px-3 md:px-5 py-2.5 bg-black/60 backdrop-blur-md border-b border-slate-800">
         {/* Title & Brand */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 min-w-0">
           <div
-            className="w-3.5 h-3.5 rounded-full animate-pulse shadow-md"
+            className="w-3.5 h-3.5 rounded-full animate-pulse shadow-md shrink-0"
             style={{ backgroundColor: theme.chamberColors.accentHex }}
           />
-          <div>
+          <div className="min-w-0">
             <h1
-              className="text-xs md:text-sm font-bold tracking-wider uppercase text-slate-100 flex items-center gap-2"
+              className="text-xs md:text-sm font-bold tracking-wider uppercase text-slate-100 flex items-center gap-2 truncate"
               style={{ textShadow: `0 0 10px ${theme.chamberColors.accentHex}80` }}
             >
               <span>GENIE</span>
-              <span className="text-[10px] text-slate-400 font-normal hidden sm:inline">
+              <span className="text-[10px] text-slate-400 font-normal hidden sm:inline truncate">
                 {theme.name}
               </span>
             </h1>
           </div>
         </div>
 
-        {/* Action Controls (Theme, Settings, Mute, Reset) */}
-        <div className="flex items-center gap-1.5 md:gap-2">
-          {/* Audio Mute Button */}
+        {/* Action Controls (Mute, Theme, Ollama Switch, Settings, Reset) */}
+        <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
           <button
+            type="button"
             onClick={() => {
               const nextMuted = !settings.isMuted;
               audioSynth.setMuted(nextMuted);
               setSettings({ ...settings, isMuted: nextMuted });
             }}
-            title={settings.isMuted ? "Unmute" : "Mute"}
+            aria-label={settings.isMuted ? 'Unmute audio' : 'Mute audio'}
+            title={settings.isMuted ? 'Unmute' : 'Mute'}
             className="p-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-slate-800 text-slate-300 hover:text-white transition-colors"
           >
             {settings.isMuted ? (
@@ -303,14 +455,15 @@ export default function App() {
             )}
           </button>
 
-          {/* Theme & Customizer Modal Toggle */}
           <button
+            type="button"
             onClick={() => {
               audioSynth.playButton();
               setIsThemeModalOpen(true);
             }}
+            aria-label="Open theme sets and character customizer"
             title="Theme Sets & Character Customizer"
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-slate-800 text-slate-300 hover:text-white transition-colors text-xs font-bold"
+            className="flex items-center gap-1 px-2 md:px-2.5 py-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-slate-800 text-slate-300 hover:text-white transition-colors text-xs font-bold"
           >
             <Palette className="w-3.5 h-3.5 text-amber-400" />
             <span className="hidden sm:inline">
@@ -318,11 +471,12 @@ export default function App() {
             </span>
           </button>
 
-          {/* Quick Ollama Strong / Weak Model Toggle */}
           <button
+            type="button"
             onClick={handleToggleOllama}
-            title={`Active Local Model: ${settings.provider === 'ollama_strong' ? 'Strong (qwen2.5:7b)' : 'Weak (llama3.2:3b)'}. Click to switch.`}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[10px] font-bold tracking-wider transition-all shadow-sm ${
+            aria-label={`Switch local model (currently ${settings.provider})`}
+            title={`Active Local Model: ${settings.provider === 'ollama_strong' ? `Strong (${strongModelDisplay})` : settings.provider === 'ollama_weak' ? `Weak (${weakModelDisplay})` : settings.provider}. Click to toggle Ollama Strong/Weak.`}
+            className={`flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 rounded-xl border text-[10px] font-bold tracking-wider transition-all shadow-sm ${
               settings.provider === 'ollama_strong'
                 ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 text-amber-300'
                 : settings.provider === 'ollama_weak'
@@ -333,12 +487,14 @@ export default function App() {
             {settings.provider === 'ollama_strong' ? (
               <>
                 <Cpu className="w-3.5 h-3.5 text-amber-400" />
-                <span>STRONG (qwen2.5:7b)</span>
+                <span className="sm:hidden">STRONG</span>
+                <span className="hidden sm:inline">STRONG ({strongModelDisplay})</span>
               </>
             ) : settings.provider === 'ollama_weak' ? (
               <>
                 <Zap className="w-3.5 h-3.5 text-emerald-400" />
-                <span>WEAK (llama3.2:3b)</span>
+                <span className="sm:hidden">WEAK</span>
+                <span className="hidden sm:inline">WEAK ({weakModelDisplay})</span>
               </>
             ) : (
               <>
@@ -348,21 +504,23 @@ export default function App() {
             )}
           </button>
 
-          {/* Settings Modal Toggle */}
           <button
+            type="button"
             onClick={() => {
               audioSynth.playButton();
               setIsSettingsModalOpen(true);
             }}
+            aria-label="Open LLM router and physics settings"
             title="LLM Router & Physics Settings"
             className="p-1.5 rounded-xl bg-black/40 hover:bg-black/60 border border-slate-800 text-slate-300 hover:text-white transition-colors"
           >
             <SettingsIcon className="w-4 h-4" />
           </button>
 
-          {/* Quick World Reset */}
           <button
+            type="button"
             onClick={handleResetSandbox}
+            aria-label="Reset sandbox"
             title="Reset Sandbox"
             className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 transition-colors"
           >
@@ -408,22 +566,21 @@ export default function App() {
         {/* ======================================================== */}
         {activeCertificate && (
           isCertificateMinimized ? (
-            /* Minimized Outcome Pill (Leaves sandbox 100% interactable & visible) */
             <div
-              className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2 rounded-2xl border-2 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom duration-200 select-none"
+              className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2 rounded-2xl border-2 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom duration-200 select-none max-w-[92vw]"
               style={{
                 backgroundColor: theme.chamberColors.bgBottom ? `${theme.chamberColors.bgBottom}ee` : '#0f1325ee',
                 borderColor: activeCertificate.survived ? '#10b981' : theme.chamberColors.accentHex,
                 boxShadow: `0 0 25px ${activeCertificate.survived ? '#10b98144' : theme.chamberColors.accentHex + '44'}`
               }}
             >
-              <div className="flex items-center gap-2 text-xs font-pixel font-bold">
+              <div className="flex items-center gap-2 text-xs font-pixel font-bold min-w-0">
                 {activeCertificate.survived ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 ) : (
-                  <Skull className="w-4 h-4 text-rose-400" />
+                  <Skull className="w-4 h-4 text-rose-400 shrink-0" />
                 )}
-                <span className={activeCertificate.survived ? 'text-emerald-300' : 'text-rose-300'}>
+                <span className={`${activeCertificate.survived ? 'text-emerald-300' : 'text-rose-300'} truncate`}>
                   {activeCertificate.survived ? 'WISH SURVIVED!' : 'RAGDOLL SLAIN!'} ({activeCertificate.loophole_score}/100)
                 </span>
               </div>
@@ -431,7 +588,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsCertificateMinimized(false)}
-                className="px-3 py-1 rounded-xl text-xs font-pixel font-bold tracking-wider uppercase transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                className="px-3 py-1 rounded-xl text-xs font-pixel font-bold tracking-wider uppercase transition-all shadow-md active:scale-95 flex items-center gap-1.5 shrink-0"
                 style={{
                   backgroundColor: theme.chamberColors.accentHex,
                   color: '#0a0d1b'
@@ -446,18 +603,26 @@ export default function App() {
                 onClick={() => {
                   audioSynth.playButton();
                   setActiveCertificate(null);
+                  setIsCertificateMinimized(false);
                 }}
+                aria-label="Dismiss outcome pill"
                 title="Dismiss"
-                className="p-1 rounded-lg bg-black/40 hover:bg-black/60 border border-slate-700 text-slate-400 hover:text-white"
+                className="p-1 rounded-lg bg-black/40 hover:bg-black/60 border border-slate-700 text-slate-400 hover:text-white shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
-            /* Full Certificate Modal with Non-Obtrusive Semi-Transparent Backdrop */
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-sm select-none animate-in fade-in zoom-in-95 duration-200">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Wish Outcome Certificate"
+              onClick={() => setIsCertificateMinimized(true)}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-sm select-none animate-in fade-in zoom-in-95 duration-200"
+            >
               <div
-                className="w-full max-w-lg rounded-2xl border-2 p-5 md:p-6 shadow-2xl relative"
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-lg rounded-2xl border-2 p-5 md:p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto"
                 style={{
                   backgroundColor: theme.chamberColors.bgBottom ? `${theme.chamberColors.bgBottom}f6` : '#0f1325f6',
                   borderColor: theme.chamberColors.accentHex,
@@ -465,7 +630,7 @@ export default function App() {
                 }}
               >
                 {/* Header Controls: View Arena (Minimize) & Close */}
-                <div className="absolute top-4 right-4 flex items-center gap-1.5">
+                <div className="flex items-center justify-end gap-1.5 mb-2">
                   <button
                     type="button"
                     onClick={() => setIsCertificateMinimized(true)}
@@ -478,7 +643,11 @@ export default function App() {
 
                   <button
                     type="button"
-                    onClick={() => setActiveCertificate(null)}
+                    onClick={() => {
+                      setActiveCertificate(null);
+                      setIsCertificateMinimized(false);
+                    }}
+                    aria-label="Close certificate"
                     className="p-1 rounded-lg bg-black/40 hover:bg-black/60 border border-slate-700 text-slate-400 hover:text-white"
                   >
                     <X className="w-4 h-4" />
@@ -498,7 +667,7 @@ export default function App() {
                     )}
                   </div>
                   <span className="text-[10px] tracking-widest uppercase font-bold text-slate-400">
-                    {theme.role}
+                    {customization?.genie?.role || theme.role}
                   </span>
                   <h2 className="text-base md:text-lg font-bold text-slate-100 mt-1 uppercase">
                     {activeCertificate.survived
@@ -509,22 +678,14 @@ export default function App() {
 
                 {/* Certificate Details */}
                 <div className="space-y-2.5 text-xs font-pixel">
-                  <div className="p-2.5 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between">
-                    <div>
+                  <div className="p-2.5 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
                       <span className="text-slate-400 uppercase text-[10px] block font-bold">WISH COVENANT:</span>
-                      <span className="text-sm font-bold text-amber-300">
+                      <span className="text-sm font-bold text-amber-300 break-words">
                         "{activeCertificate.wishText}"
                       </span>
                     </div>
-                    {activeCertificate.from_cache ? (
-                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold shrink-0">
-                        ⚡ CACHED
-                      </span>
-                    ) : (
-                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold shrink-0">
-                        🧠 LOCAL LLM
-                      </span>
-                    )}
+                    {renderSourceBadge(activeCertificate)}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -562,7 +723,7 @@ export default function App() {
                 </div>
 
                 {/* Action Buttons: Continue + Inspect Arena */}
-                <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-center gap-3">
+                <div className="mt-4 pt-3 border-t border-slate-700/60 flex flex-wrap items-center justify-center gap-3">
                   <button
                     type="button"
                     onClick={() => setIsCertificateMinimized(true)}
@@ -573,22 +734,7 @@ export default function App() {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      audioSynth.playButton();
-                      setActiveCertificate(null);
-                      setIsExecuting(false);
-                      setWishNumber(1);
-                      setSurvivedWishesCount(0);
-                      setCurrentDialogue({
-                        speaker: customization?.genie?.name || theme.name.split(':')[1]?.trim() || theme.name,
-                        text: customization?.genie?.introDialogue || theme.introDialogue,
-                        loopholeScore: 100,
-                        loopholeExplanation: 'State your wish carefully... or your vessel will be harvested.',
-                        voicePitch: 1.0,
-                        survived: true
-                      });
-                      setResetTrigger((prev) => prev + 1);
-                    }}
+                    onClick={handleCertificateContinue}
                     className="px-6 py-2 rounded-xl font-pixel text-xs font-bold tracking-wider uppercase transition-all shadow-lg active:scale-95"
                     style={{
                       backgroundColor: theme.chamberColors.accentHex,
@@ -596,7 +742,7 @@ export default function App() {
                     }}
                   >
                     {activeCertificate.survived
-                      ? (survivedWishesCount >= theme.maxWishes ? 'CLAIM VICTORY' : `PROCEED TO WISH (${wishNumber}/${theme.maxWishes})`)
+                      ? (wishNumber >= maxWishes ? 'CLAIM VICTORY (NEW RUN)' : `PROCEED TO WISH (${wishNumber + 1}/${maxWishes})`)
                       : 'TRY AGAIN (RESET TO WISH 1)'}
                   </button>
                 </div>

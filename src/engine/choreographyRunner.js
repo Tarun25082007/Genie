@@ -13,7 +13,9 @@ export class ChoreographyRunner {
       shake: 0,
       redGoreFlash: 0,
       slowMotion: false,
+      slowMotionEndMs: null,
       zoomOnPlayer: false,
+      zoomEndMs: null,
       crtGlitch: 0
     };
 
@@ -30,6 +32,7 @@ export class ChoreographyRunner {
 
     // External Event Handlers wired by GameCanvas / App
     this.handlers = {
+      onScenarioStart: null,
       onSpawnObject: null,
       onDestroyJoint: null,
       onApplyForce: null,
@@ -46,12 +49,18 @@ export class ChoreographyRunner {
     this.elapsedMs = 0;
     this.isPlaying = true;
 
+    if (this.handlers.onScenarioStart) {
+      this.handlers.onScenarioStart(scenario);
+    }
+
     // Reset camera & world modifiers
     this.cameraFX = {
       shake: 0,
       redGoreFlash: 0,
       slowMotion: false,
+      slowMotionEndMs: null,
       zoomOnPlayer: false,
+      zoomEndMs: null,
       crtGlitch: 0
     };
 
@@ -108,6 +117,16 @@ export class ChoreographyRunner {
       this.executeVerb(event);
     }
 
+    // Expire deterministic Camera FX timers
+    if (this.cameraFX.slowMotion && this.cameraFX.slowMotionEndMs !== null && this.elapsedMs >= this.cameraFX.slowMotionEndMs) {
+      this.cameraFX.slowMotion = false;
+      this.cameraFX.slowMotionEndMs = null;
+    }
+    if (this.cameraFX.zoomOnPlayer && this.cameraFX.zoomEndMs !== null && this.elapsedMs >= this.cameraFX.zoomEndMs) {
+      this.cameraFX.zoomOnPlayer = false;
+      this.cameraFX.zoomEndMs = null;
+    }
+
     // Auto-restore temporary gravity inversion / anti-gravity overrides so models fall back down
     if (this.worldModifiers.gravityActive && this.worldModifiers.gravityRestoreAtMs !== null && this.elapsedMs >= this.worldModifiers.gravityRestoreAtMs) {
       this.worldModifiers.gravityActive = false;
@@ -123,6 +142,10 @@ export class ChoreographyRunner {
     const maxTime = 4500;
     if (this.timeline.length === 0 && this.elapsedMs > maxTime) {
       this.isPlaying = false;
+      this.cameraFX.slowMotion = false;
+      this.cameraFX.slowMotionEndMs = null;
+      this.cameraFX.zoomOnPlayer = false;
+      this.cameraFX.zoomEndMs = null;
       // Ensure negative gravity / singularity never stays stuck permanently after scenario completes
       this.worldModifiers.gravityActive = false;
       this.worldModifiers.gravity = { x: 0, y: 1.0 };
@@ -148,7 +171,7 @@ export class ChoreographyRunner {
 
       case 'DESTROY_JOINT':
         if (this.handlers.onDestroyJoint) {
-          this.handlers.onDestroyJoint(params.joint || 'neck', params.blood_burst || 120);
+          this.handlers.onDestroyJoint(params.joint || 'neck', params.blood_burst ?? 120);
         }
         audioSynth.playBoneCrunch();
         audioSynth.playBloodSpray();
@@ -156,7 +179,7 @@ export class ChoreographyRunner {
 
       case 'APPLY_FORCE':
         if (this.handlers.onApplyForce) {
-          this.handlers.onApplyForce(params.target || 'all', params.fx || 0, params.fy || 0);
+          this.handlers.onApplyForce(params.target || 'all', params.fx ?? 0, params.fy ?? 0);
         }
         break;
 
@@ -212,9 +235,9 @@ export class ChoreographyRunner {
     } else if (modifier === 'BLACK_HOLE') {
       const duration = typeof params.duration_ms === 'number' ? params.duration_ms : 2800;
       this.worldModifiers.blackHole = {
-        x: params.x || 480,
-        y: params.y || 250,
-        strength: params.strength || 0.008
+        x: params.x ?? 480,
+        y: params.y ?? 250,
+        strength: params.strength ?? 0.008
       };
       this.worldModifiers.blackHoleRestoreAtMs = this.elapsedMs + duration;
       audioSynth.playExplosion();
@@ -228,19 +251,15 @@ export class ChoreographyRunner {
 
     if (effect === 'SCREEN_SHAKE') {
       this.cameraFX.shake = Math.max(this.cameraFX.shake, intensity);
-    } else if (effect === 'RED_GORE_FLASH') {
+    } else if (effect === 'RED_GORE_FLASH' || effect === 'RED_FLASH') {
       this.cameraFX.redGoreFlash = 0.8;
       audioSynth.playBloodSpray();
     } else if (effect === 'SLOW_MOTION') {
       this.cameraFX.slowMotion = true;
-      setTimeout(() => {
-        this.cameraFX.slowMotion = false;
-      }, duration_ms);
+      this.cameraFX.slowMotionEndMs = this.elapsedMs + duration_ms;
     } else if (effect === 'ZOOM_ON_PLAYER') {
       this.cameraFX.zoomOnPlayer = true;
-      setTimeout(() => {
-        this.cameraFX.zoomOnPlayer = false;
-      }, duration_ms);
+      this.cameraFX.zoomEndMs = this.elapsedMs + duration_ms;
     } else if (effect === 'CRT_GLITCH') {
       this.cameraFX.crtGlitch = 1.0;
     }
@@ -255,7 +274,9 @@ export class ChoreographyRunner {
       shake: 0,
       redGoreFlash: 0,
       slowMotion: false,
+      slowMotionEndMs: null,
       zoomOnPlayer: false,
+      zoomEndMs: null,
       crtGlitch: 0
     };
     this.worldModifiers = {

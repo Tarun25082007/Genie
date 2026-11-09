@@ -36,12 +36,27 @@ export default function GameCanvas({
   const propsRef = useRef([]);
   const activeConstraintsRef = useRef([]);
   const animFrameRef = useRef(null);
-  const prevWishNumberRef = useRef(wishNumber);
+  const needsStageResetRef = useRef(false);
   const settingsRef = useRef(settings);
+  const customizationRef = useRef(customization);
+  const onDialogueUpdateRef = useRef(onDialogueUpdate);
+  const onWishCompletedRef = useRef(onWishCompleted);
 
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+
+  useEffect(() => {
+    customizationRef.current = customization;
+  }, [customization]);
+
+  useEffect(() => {
+    onDialogueUpdateRef.current = onDialogueUpdate;
+  }, [onDialogueUpdate]);
+
+  useEffect(() => {
+    onWishCompletedRef.current = onWishCompleted;
+  }, [onWishCompleted]);
 
   // Animated Genie State (floats at x = 220, y = 220)
   const genieAnimRef = useRef({
@@ -56,8 +71,8 @@ export default function GameCanvas({
   const resetSandboxStage = (engine, custom) => {
     if (!engine) return;
 
-    vfxSystem.debris = [];
-    vfxSystem.shockwaves = [];
+    needsStageResetRef.current = false;
+    vfxSystem.reset();
 
     // Remove existing dynamic props
     propsRef.current.forEach((b) => World.remove(engine.world, b));
@@ -122,8 +137,9 @@ export default function GameCanvas({
 
     // Mouse Constraint for dragging bodies
     const canvas = matterCanvasRef.current;
+    let mouse = null;
     if (canvas) {
-      const mouse = Mouse.create(canvas);
+      mouse = Mouse.create(canvas);
       const mouseConstraint = MouseConstraint.create(engine, {
         mouse,
         constraint: {
@@ -150,9 +166,16 @@ export default function GameCanvas({
           if (other.label === 'ceiling_spike' || other.customData?.isSpike) {
             rag.takeDamage(100, other.position, audioSynth, cellularGridRef.current);
             rag.severJoint('neck', cellularGridRef.current, audioSynth);
+            return;
           }
-          // If hit by falling props (e.g. 2-ton anvil, monster sandwich, car, meteor, safe)
-          else if (propsRef.current.includes(other)) {
+
+          // Harmless surviving outcomes must never accidentally disarticulate/squash on gentle contact
+          if (choreographyRunner.currentScenario?.survived === true) {
+            return;
+          }
+
+          // If hit by falling/charging props (e.g. 2-ton anvil, monster sandwich, car, meteor, safe)
+          if (propsRef.current.includes(other)) {
             const relVel = Math.hypot(
               bodyA.velocity.x - bodyB.velocity.x,
               bodyA.velocity.y - bodyB.velocity.y
@@ -171,6 +194,13 @@ export default function GameCanvas({
 
     // Connect Choreography Runner Handlers
     choreographyRunner.handlers = {
+      // 0. Prepare stage cleanly if a previous wish outcome left corpses or props behind
+      onScenarioStart: () => {
+        if (engineRef.current && (needsStageResetRef.current || ragdollRef.current?.isDead)) {
+          resetSandboxStage(engineRef.current, customizationRef.current);
+        }
+      },
+
       // 1. SPAWN_OBJECT
       onSpawnObject: (params, customPropDef) => {
         if (!engineRef.current) return;
@@ -179,8 +209,8 @@ export default function GameCanvas({
           propsRef.current.push(body);
           World.add(engineRef.current.world, body);
         });
-        // Threat of summoned entity drains human sanity
-        ragdollRef.current?.reduceSanity(25, 'PROP_SUMMONED');
+        const isHarmless = choreographyRunner.currentScenario?.survived === true;
+        ragdollRef.current?.reduceSanity(isHarmless ? 5 : 25, 'PROP_SUMMONED');
       },
 
       // 2. DESTROY_JOINT
@@ -257,43 +287,45 @@ export default function GameCanvas({
 
       // 7. Dialogue & Taunt
       onDialogueUpdate: (dialogue) => {
-        if (onDialogueUpdate) onDialogueUpdate(dialogue);
+        if (onDialogueUpdateRef.current) onDialogueUpdateRef.current(dialogue);
         // Genie's sinister mocking words erode human sanity
         if (dialogue?.speaker && dialogue.speaker.toLowerCase().includes('genie')) {
-          ragdollRef.current?.reduceSanity(20, 'GENIE_SPEAKS');
+          const isHarmless = choreographyRunner.currentScenario?.survived === true;
+          ragdollRef.current?.reduceSanity(isHarmless ? 5 : 20, 'GENIE_SPEAKS');
         }
       },
 
       // 8. Wish Outcome
       onWishCompleted: (scenario) => {
-        if (onWishCompleted) onWishCompleted(scenario);
+        needsStageResetRef.current = true;
+        if (onWishCompletedRef.current) onWishCompletedRef.current(scenario);
       }
     };
 
     return () => {
-      World.clear(engine.world);
+      choreographyRunner.reset();
+      Events.off(engine);
+      if (mouse?.element) {
+        mouse.element.removeEventListener('mousemove', mouse.mousemove);
+        mouse.element.removeEventListener('mousedown', mouse.mousedown);
+        mouse.element.removeEventListener('mouseup', mouse.mouseup);
+        mouse.element.removeEventListener('wheel', mouse.mousewheel);
+        mouse.element.removeEventListener('touchmove', mouse.mousemove);
+        mouse.element.removeEventListener('touchstart', mouse.mousedown);
+        mouse.element.removeEventListener('touchend', mouse.mouseup);
+      }
+      World.clear(engine.world, false);
       Engine.clear(engine);
     };
   }, []);
 
-  // Reset sandbox stage on wish sequence change
-  useEffect(() => {
-    if (wishNumber !== prevWishNumberRef.current) {
-      prevWishNumberRef.current = wishNumber;
-      if (engineRef.current) {
-        choreographyRunner.reset();
-        resetSandboxStage(engineRef.current, customization);
-      }
-    }
-  }, [wishNumber, customization]);
-
-  // Handle explicit reset & resurrection trigger from App (Try Again / Reset Sandbox)
+  // Handle explicit reset & resurrection trigger from App (Try Again / Proceed / Reset Sandbox)
   useEffect(() => {
     if (engineRef.current && resetTrigger > 0) {
       choreographyRunner.reset();
-      resetSandboxStage(engineRef.current, customization);
+      resetSandboxStage(engineRef.current, customizationRef.current);
     }
-  }, [resetTrigger, customization]);
+  }, [resetTrigger]);
 
   // Update Ragdoll customization dynamically
   useEffect(() => {
@@ -435,7 +467,12 @@ export default function GameCanvas({
           if (b.position.y >= 470 && b.velocity.y > 4.5 && !b.hasImpactedFloor) {
             b.hasImpactedFloor = true;
             const intensity = Math.min(2.5, (b.mass || 100) / 110);
-            vfxSystem.spawnImpactDebris(b.position.x, 504, b.customData?.spriteKey || b.customData?.propType, intensity);
+            vfxSystem.spawnImpactDebris(
+              b.position.x,
+              504,
+              b.customData?.spriteKey || b.customData?.customDef?.name || b.customData?.propType,
+              intensity
+            );
             vfxSystem.triggerHitStop(2);
 
             const pKey = String(b.customData?.spriteKey || b.customData?.propType || '').toUpperCase();
@@ -518,9 +555,12 @@ export default function GameCanvas({
 
       // 3. Update Ragdoll Stress Severing, Stumps & Posture (with overhead danger tracking)
       if (ragdoll) {
-        const nearestFallingProp = propsRef.current.find(
-          (b) => b.position.y < 420 && Math.abs(b.position.x - 480) < 160 && b.velocity.y > 2.5
-        );
+        const isHarmless = choreographyRunner.currentScenario?.survived === true;
+        const nearestFallingProp = !isHarmless
+          ? propsRef.current.find(
+              (b) => b.position.y < 420 && Math.abs(b.position.x - 480) < 160 && b.velocity.y > 2.5
+            )
+          : null;
         ragdoll.update(
           cellular,
           CANVAS_WIDTH,
@@ -535,10 +575,16 @@ export default function GameCanvas({
         cellular.step(
           activeBodies,
           (bodyIdx) => {
-            if (ragdoll) ragdoll.onAcidContact(bodyIdx, cellular, audioSynth);
+            const hitBody = activeBodies[bodyIdx];
+            if (ragdoll && hitBody?.label?.startsWith('ragdoll_')) {
+              ragdoll.onAcidContact(hitBody, cellular, audioSynth);
+            }
           },
           (bodyIdx, weight) => {
-            if (ragdoll) ragdoll.onGoldWeight(bodyIdx, weight);
+            const hitBody = activeBodies[bodyIdx];
+            if (ragdoll && hitBody?.label?.startsWith('ragdoll_')) {
+              ragdoll.onGoldWeight(hitBody, weight);
+            }
           }
         );
       }

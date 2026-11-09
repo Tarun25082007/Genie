@@ -17,7 +17,7 @@ export class AudioSynth {
   }
 
   init() {
-    if (this.ctx) return;
+    if (this.ctx || typeof window === 'undefined') return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
 
@@ -346,6 +346,30 @@ export class AudioSynth {
   // Aliases & Utility Cues
   playBoneCrunch() {
     this.playGoreCrunch();
+  }
+
+  playCrunch() {
+    this.playBoneCrunch();
+  }
+
+  playCarCrash() {
+    this.playThud(1.7);
+    this.playGoreCrunch();
+    if (!this.ctx || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(620, now);
+    osc.frequency.exponentialRampToValueAtTime(110, now + 0.25);
+
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.27);
   }
 
   playLaugh(baseFreq = 135) {

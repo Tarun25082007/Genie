@@ -1,5 +1,5 @@
 // Multi-Provider LLM Director Router + Strict Schema Sanitizer & System Prompt Template
-import { synthesizeTopicScenario, generateProceduralPixelSprite } from '../engine/topicPixelArtGenerator.js';
+import { synthesizeTopicScenario } from '../engine/topicPixelArtGenerator.js';
 import { getCachedWish, saveCachedWish } from './wishCache.js';
 
 export const SYSTEM_PROMPT_TEMPLATE = `You are the malicious, hyper-literal Genie governing the 2D physics sandbox game "GENIE".
@@ -56,6 +56,28 @@ export function populateSystemPrompt(theme, wishNumber = 1, maxWishes = 3) {
     .replace('{{MAX_WISHES}}', String(maxWishes));
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  let timer = null;
+  if (controller && !options.signal) {
+    timer = setTimeout(() => controller.abort(), timeoutMs);
+  }
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: options.signal || controller?.signal
+    });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw err;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function interpretWishWithDirector(
   wishText,
   provider = 'ollama_strong',
@@ -63,17 +85,17 @@ export async function interpretWishWithDirector(
   themeContext = null,
   wishNumber = 1
 ) {
-  const cleanWish = wishText.trim();
+  const cleanWish = typeof wishText === 'string' ? wishText.trim() : '';
   if (!cleanWish) return null;
 
+  const isOllama = provider === 'ollama' || provider === 'ollama_strong' || provider === 'ollama_weak';
+
   // 1. FAST PATH: Check persistent local wish cache first!
-  const cached = getCachedWish(cleanWish);
+  const cached = getCachedWish(cleanWish, { includeProcedural: provider === 'mock' });
   if (cached) {
     console.log(`[WishCache] Instant cache hit for "${cleanWish}" (Source: ${cached.cache_source || 'cached'})`);
     return cached;
   }
-
-  const isOllama = provider === 'ollama' || provider === 'ollama_strong' || provider === 'ollama_weak';
 
   const resolvedApiKey = credentials?.apiKey || (
     provider === 'groq'
@@ -85,8 +107,18 @@ export async function interpretWishWithDirector(
 
   if (provider === 'mock' || (!isOllama && !resolvedApiKey)) {
     const procedural = synthesizeTopicScenario(cleanWish);
-    saveCachedWish(cleanWish, procedural, 'procedural');
-    return procedural;
+    const reason = provider === 'mock'
+      ? null
+      : `Missing ${provider === 'groq' ? 'Groq' : 'Gemini'} API key`;
+    if (provider === 'mock') {
+      saveCachedWish(cleanWish, procedural, 'procedural');
+    }
+    return {
+      ...procedural,
+      generation_source: provider === 'mock' ? 'procedural' : 'procedural_fallback',
+      fallback_used: provider !== 'mock',
+      ...(reason ? { fallback_reason: reason } : {})
+    };
   }
 
   const systemPrompt = populateSystemPrompt(
@@ -101,7 +133,7 @@ export async function interpretWishWithDirector(
     if (provider === 'groq') {
       rawResponse = await queryGroq(cleanWish, resolvedApiKey, credentials.model || 'llama-3.3-70b-versatile', systemPrompt);
     } else if (provider === 'gemini') {
-      rawResponse = await queryGemini(cleanWish, resolvedApiKey, credentials.model || 'gemini-1.5-flash', systemPrompt);
+      rawResponse = await queryGemini(cleanWish, resolvedApiKey, credentials.model || 'gemini-2.5-flash', systemPrompt);
     } else if (isOllama) {
       const endpoint = credentials.endpoint || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OLLAMA_ENDPOINT) || 'http://localhost:11434';
       let model = 'qwen2.5:7b';
@@ -115,30 +147,42 @@ export async function interpretWishWithDirector(
       rawResponse = await queryOllama(cleanWish, endpoint, model, systemPrompt);
     }
 
+    if (!parseJsonResponse(rawResponse)) {
+      throw new Error(`Provider "${provider}" returned empty or unparseable JSON`);
+    }
+
     const sanitized = sanitizeDirectorSchema(rawResponse, cleanWish);
-    // 2. Cache the newly generated wish scenario for instant future re-use!
-    saveCachedWish(cleanWish, sanitized, isOllama ? 'local_llm' : provider);
-    return sanitized;
+    const sourceTag = isOllama ? 'local_llm' : provider;
+    saveCachedWish(cleanWish, sanitized, sourceTag);
+    return {
+      ...sanitized,
+      generation_source: sourceTag,
+      fallback_used: false
+    };
   } catch (err) {
     console.warn(`Director provider "${provider}" failed. Falling back to dynamic procedural synthesis:`, err);
     const fallback = synthesizeTopicScenario(cleanWish);
-    saveCachedWish(cleanWish, fallback, 'local_llm_fallback');
-    return fallback;
+    return {
+      ...fallback,
+      generation_source: 'procedural_fallback',
+      fallback_used: true,
+      fallback_reason: err?.message || 'Provider unavailable'
+    };
   }
 }
 
 async function queryGroq(wishText, apiKey, model, systemPrompt) {
   const candidateModels = [
     model,
-    'openai/gpt-oss-120b',
-    'qwen/qwen3.8-27b',
-    'llama-3.3-70b-versatile'
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'openai/gpt-oss-120b'
   ].filter((m, i, arr) => m && arr.indexOf(m) === i);
 
   let lastError = null;
   for (const m of candidateModels) {
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +197,7 @@ async function queryGroq(wishText, apiKey, model, systemPrompt) {
           temperature: 0.8,
           response_format: { type: 'json_object' }
         })
-      });
+      }, 20000);
 
       if (res.ok) {
         const data = await res.json();
@@ -175,9 +219,8 @@ async function queryGemini(wishText, apiKey, model, systemPrompt) {
   const candidateModels = [
     model,
     'gemini-2.5-flash',
-    'gemini-3.8-flash',
-    'gemini-flash-latest',
-    'gemini-1.5-flash'
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash'
   ].filter((m, i, arr) => m && arr.indexOf(m) === i);
 
   let lastError = null;
@@ -186,7 +229,7 @@ async function queryGemini(wishText, apiKey, model, systemPrompt) {
       const targetModel = m.replace('models/', '');
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
 
-      const res = await fetch(url, {
+      const res = await fetchWithTimeout(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -198,7 +241,7 @@ async function queryGemini(wishText, apiKey, model, systemPrompt) {
             temperature: 0.85
           }
         })
-      });
+      }, 20000);
 
       if (res.ok) {
         const data = await res.json();
@@ -217,7 +260,7 @@ async function queryGemini(wishText, apiKey, model, systemPrompt) {
 }
 
 async function queryOllama(wishText, endpoint, model, systemPrompt) {
-  const res = await fetch(`${endpoint.replace(/\/$/, '')}/api/generate`, {
+  const res = await fetchWithTimeout(`${endpoint.replace(/\/$/, '')}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -227,30 +270,46 @@ async function queryOllama(wishText, endpoint, model, systemPrompt) {
       stream: false,
       format: 'json',
       options: {
-        num_predict: 250,
+        num_predict: 300,
         temperature: 0.6
       }
     })
-  });
+  }, 25000);
 
   if (!res.ok) throw new Error(`Ollama HTTP ${res.status}: ${await res.text()}`);
   const data = await res.json();
   return data.response || '';
 }
 
-export function sanitizeDirectorSchema(rawText, originalWish) {
-  if (!rawText) return synthesizeTopicScenario(originalWish);
+function parseJsonResponse(rawText) {
+  if (typeof rawText === 'object' && rawText !== null) return rawText;
+  if (typeof rawText !== 'string' || !rawText.trim()) return null;
 
   let cleaned = rawText.trim();
-  if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-  else if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  }
 
-  let parsed;
   try {
-    parsed = JSON.parse(cleaned);
-  } catch (err) {
-    console.warn('JSON parse error from LLM director:', err);
-    return synthesizeTopicScenario(originalWish);
+    return JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
+export function sanitizeDirectorSchema(rawText, originalWish) {
+  const baseFallback = synthesizeTopicScenario(originalWish);
+  const parsed = parseJsonResponse(rawText);
+  if (!parsed || typeof parsed !== 'object') {
+    return baseFallback;
   }
 
   let score;
@@ -264,9 +323,14 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
     score = Math.max(0, Math.min(100, Math.round(parsed.loophole_score)));
     survived = score >= 50;
   } else {
-    score = 25;
-    survived = false;
+    survived = baseFallback.survived;
+    score = baseFallback.loophole_score;
   }
+
+  // Keep procedural fallback timeline & custom prop strictly synchronized with LLM survival verdict
+  const fallbackScenario = survived === baseFallback.survived
+    ? baseFallback
+    : synthesizeTopicScenario(originalWish, survived);
 
   const validVerbs = new Set([
     'SPAWN_OBJECT',
@@ -279,38 +343,50 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
     'CAMERA_FX'
   ]);
 
-  const fallbackScenario = synthesizeTopicScenario(originalWish);
-
-  // Validate and sanitize custom_prop
+  // Validate and sanitize custom_prop against its palette
   let customProp = null;
   if (parsed.custom_prop && typeof parsed.custom_prop === 'object') {
     const cp = parsed.custom_prop;
     if (Array.isArray(cp.matrix) && cp.matrix.length > 0) {
-      const fixedMatrix = cp.matrix.slice(0, 16).map(row => {
-        const str = String(row || '');
-        if (str.length === 16) return str;
-        if (str.length < 16) return str.padEnd(16, '.');
-        return str.substring(0, 16);
+      const palette = {
+        ...(cp.palette && typeof cp.palette === 'object' ? cp.palette : {}),
+        '.': null
+      };
+      const allowedChars = new Set(Object.keys(palette));
+
+      const fixedMatrix = cp.matrix.slice(0, 16).map((row) => {
+        const sanitizedRow = Array.from(String(row || ''))
+          .slice(0, 16)
+          .map((ch) => (allowedChars.has(ch) ? ch : '.'))
+          .join('');
+        return sanitizedRow.padEnd(16, '.');
       });
       while (fixedMatrix.length < 16) fixedMatrix.push('................');
 
-      const palette = { ...cp.palette, '.': null };
+      const rawScale = typeof cp.scale === 'number' ? Math.max(1.5, Math.min(6, cp.scale)) : (survived ? 3.0 : 4.5);
+      const rawMass = typeof cp.mass === 'number' ? Math.max(1, Math.min(999, cp.mass)) : (survived ? 6 : 380);
+
       customProp = {
         name: String(cp.name || 'CUSTOM_PROP').toUpperCase(),
         width: 16,
         height: 16,
-        scale: typeof cp.scale === 'number' ? Math.max(1.5, Math.min(6, cp.scale)) : (survived ? 3.0 : 4.5),
-        mass: typeof cp.mass === 'number' ? Math.max(1, Math.min(999, cp.mass)) : (survived ? 8 : 380),
-        restitution: typeof cp.restitution === 'number' ? cp.restitution : 0.2,
+        scale: survived ? Math.min(rawScale, 3.5) : rawScale,
+        mass: survived ? Math.min(rawMass, 25) : rawMass,
+        restitution: typeof cp.restitution === 'number' ? Math.max(0, Math.min(0.95, cp.restitution)) : 0.2,
         palette,
         matrix: fixedMatrix
       };
     }
   }
 
-  // If local model omitted custom_prop, supply procedural pixel sprite for this topic!
   if (!customProp) {
     customProp = fallbackScenario.custom_prop;
+  } else if (survived) {
+    customProp = {
+      ...customProp,
+      mass: Math.min(customProp.mass || 6, 25),
+      scale: Math.min(customProp.scale || 3.2, 3.5)
+    };
   }
 
   let timeline = Array.isArray(parsed.choreography_timeline) && parsed.choreography_timeline.length > 0
@@ -319,21 +395,70 @@ export function sanitizeDirectorSchema(rawText, originalWish) {
         .map((step) => ({
           time_ms: Math.max(0, Math.min(4500, Math.round(step.time_ms))),
           verb: step.verb,
-          params: step.params || {}
+          params: (step.params && typeof step.params === 'object') ? { ...step.params } : {}
         }))
     : fallbackScenario.choreography_timeline;
 
-  // If player survived (e.g. harmless children play money or toy grant), NEVER disarticulate the player!
+  if (!timeline || timeline.length === 0) {
+    timeline = fallbackScenario.choreography_timeline;
+  }
+
+  // Enforce non-lethal choreography invariants whenever the verdict is survived === true
   if (survived) {
-    timeline = timeline.filter((step) => step.verb !== 'DESTROY_JOINT');
+    const safeParticleMap = { BLOOD: 'SPARK', ACID: 'WATER', LAVA: 'GOLD', FIRE: 'SPARK' };
+    const filtered = [];
+    for (const step of timeline) {
+      if (step.verb === 'DESTROY_JOINT') continue;
+      if (step.verb === 'APPLY_FORCE') continue;
+      if (step.verb === 'WORLD_MODIFIER') continue;
+      if (step.verb === 'CAMERA_FX') {
+        const eff = String(step.params?.effect || '').toUpperCase();
+        if (eff === 'RED_FLASH' || eff === 'RED_GORE_FLASH') continue;
+      }
+      if (step.verb === 'SPAWN_OBJECT') {
+        const p = step.params || {};
+        filtered.push({
+          ...step,
+          params: {
+            ...p,
+            prop_type: p.prop_type || 'CUSTOM_PROP',
+            mass: Math.min(Number(p.mass) || 6, 20),
+            scale: Math.min(Number(p.scale) || 3.2, 3.5),
+            vy: Math.max(-4, Math.min(Number(p.vy) ?? 2, 6)),
+            vx: Math.max(-8, Math.min(Number(p.vx) ?? 0, 8)),
+            y: Math.max(200, Math.min(Number(p.y) ?? 300, 440))
+          }
+        });
+        continue;
+      }
+      if (step.verb === 'EMIT_PARTICLES') {
+        const rawType = String(step.params?.type || 'SPARK').toUpperCase();
+        filtered.push({
+          ...step,
+          params: {
+            ...step.params,
+            type: safeParticleMap[rawType] || rawType,
+            count: Math.min(Number(step.params?.count) || 50, 90)
+          }
+        });
+        continue;
+      }
+      filtered.push(step);
+    }
+
+    timeline = filtered.length > 0 ? filtered : fallbackScenario.choreography_timeline;
   }
 
   return {
     wishText: originalWish,
     survived,
     loophole_score: score,
-    genie_taunt: parsed.genie_taunt || fallbackScenario.genie_taunt,
-    loophole_explanation: parsed.loophole_explanation || fallbackScenario.loophole_explanation,
+    genie_taunt: typeof parsed.genie_taunt === 'string' && parsed.genie_taunt.trim()
+      ? parsed.genie_taunt.trim()
+      : fallbackScenario.genie_taunt,
+    loophole_explanation: typeof parsed.loophole_explanation === 'string' && parsed.loophole_explanation.trim()
+      ? parsed.loophole_explanation.trim()
+      : fallbackScenario.loophole_explanation,
     voice_pitch: typeof parsed.voice_pitch === 'number' ? Math.max(0.5, Math.min(1.8, parsed.voice_pitch)) : 1.0,
     custom_prop: customProp,
     choreography_timeline: timeline
@@ -345,27 +470,39 @@ export async function testProviderConnection(provider, apiKey, endpoint = '', ta
     return { success: true, message: 'Offline Mock Director is ready.' };
   }
 
+  const resolvedApiKey = apiKey || (
+    provider === 'groq'
+      ? (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY)
+      : provider === 'gemini'
+      ? (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY)
+      : ''
+  ) || '';
+
   if (provider === 'groq') {
-    if (!apiKey) return { success: false, message: 'Groq API Key is required.' };
+    if (!resolvedApiKey) return { success: false, message: 'Groq API Key is required.' };
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/models', {
-        headers: { 'Authorization': `Bearer ${apiKey}` }
-      });
+      const res = await fetchWithTimeout('https://api.groq.com/openai/v1/models', {
+        headers: { 'Authorization': `Bearer ${resolvedApiKey}` }
+      }, 6000);
       return res.ok
         ? { success: true, message: 'Groq API connection verified! (Llama-3.3 70B ready)' }
-        : { success: false, message: `Groq error: ${res.statusText}` };
+        : { success: false, message: `Groq error: ${res.statusText || res.status}` };
     } catch (err) {
       return { success: false, message: `Failed to connect to Groq: ${err.message}` };
     }
   }
 
   if (provider === 'gemini') {
-    if (!apiKey) return { success: false, message: 'Gemini API Key is required.' };
+    if (!resolvedApiKey) return { success: false, message: 'Gemini API Key is required.' };
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      const res = await fetchWithTimeout(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${resolvedApiKey}`,
+        {},
+        6000
+      );
       return res.ok
         ? { success: true, message: 'Google Gemini API connection verified! (Gemini 2.5 ready)' }
-        : { success: false, message: `Gemini error: ${res.statusText}` };
+        : { success: false, message: `Gemini error: ${res.statusText || res.status}` };
     } catch (err) {
       return { success: false, message: `Failed to connect to Gemini: ${err.message}` };
     }
@@ -374,9 +511,9 @@ export async function testProviderConnection(provider, apiKey, endpoint = '', ta
   if (provider === 'ollama' || provider === 'ollama_strong' || provider === 'ollama_weak') {
     const ep = endpoint || 'http://localhost:11434';
     try {
-      const res = await fetch(`${ep.replace(/\/$/, '')}/api/tags`);
+      const res = await fetchWithTimeout(`${ep.replace(/\/$/, '')}/api/tags`, {}, 6000);
       if (!res.ok) {
-        return { success: false, message: `Ollama error: ${res.statusText}` };
+        return { success: false, message: `Ollama error: ${res.statusText || res.status}` };
       }
       const data = await res.json();
       const installedModels = (data.models || []).map((m) => m.name || m.model || '');
@@ -387,8 +524,8 @@ export async function testProviderConnection(provider, apiKey, endpoint = '', ta
           const mClean = m.toLowerCase();
           return (
             mClean === targetClean ||
-            mClean.startsWith(targetClean + ':') ||
-            targetClean.startsWith(mClean.split(':')[0])
+            mClean === `${targetClean}:latest` ||
+            (!targetClean.includes(':') && mClean.split(':')[0] === targetClean)
           );
         });
 
@@ -400,7 +537,7 @@ export async function testProviderConnection(provider, apiKey, endpoint = '', ta
         } else {
           const list = installedModels.length > 0 ? installedModels.slice(0, 3).join(', ') : 'none';
           return {
-            success: true,
+            success: false,
             message: `Ollama Online, but "${targetModel}" not installed yet. Run "ollama run ${targetModel}". (Installed: ${list})`
           };
         }
@@ -413,7 +550,7 @@ export async function testProviderConnection(provider, apiKey, endpoint = '', ta
     } catch (err) {
       return {
         success: false,
-        message: `Could not reach Ollama at ${ep}. Make sure "ollama serve" is running.`
+        message: `Could not reach Ollama at ${ep}. Make sure "ollama serve" is running (${err.message}).`
       };
     }
   }

@@ -1,16 +1,21 @@
 // Topic-Aware Procedural Pixel Art & Custom Choreography Synthesizer
 // Generates Terraria / Stardew Valley level 16x16 pixel-art sprites and custom slapstick physics for ANY wish topic!
 
-export function synthesizeTopicScenario(cleanWish) {
+export function synthesizeTopicScenario(cleanWish, forcedSurvived = null) {
   const wishLower = cleanWish.toLowerCase();
 
   // 1. Detect Category & Dominant Entity
   const category = detectTopicCategory(wishLower);
   const spriteDef = generateProceduralPixelSprite(category, wishLower);
-  const choreography = generateTopicChoreography(category, wishLower, spriteDef);
+  let choreography = generateTopicChoreography(category, wishLower, spriteDef);
+
+  const initialSurvived = choreography.survived ?? false;
+  if (typeof forcedSurvived === 'boolean' && forcedSurvived !== initialSurvived) {
+    choreography = alignChoreographyWithSurvival(choreography, category, wishLower, spriteDef, forcedSurvived);
+  }
 
   const survived = choreography.survived ?? false;
-  const loopholeScore = choreography.loophole_score ?? (survived ? (Math.floor(Math.random() * 20) + 65) : (Math.floor(Math.random() * 20) + 10));
+  const loopholeScore = choreography.loophole_score ?? (survived ? 75 : 18);
 
   return {
     wishText: cleanWish,
@@ -24,8 +29,47 @@ export function synthesizeTopicScenario(cleanWish) {
   };
 }
 
+function alignChoreographyWithSurvival(choreography, category, wishLower, spriteDef, survived) {
+  if (survived) {
+    const safeSpriteScale = Math.min(spriteDef?.scale || 3.2, 3.5);
+    return {
+      ...choreography,
+      survived: true,
+      loophole_score: Math.max(70, choreography.loophole_score || 75),
+      timeline: [
+        { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 4, duration_ms: 650 } },
+        { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 560, y: 310, vx: -1, vy: 2, mass: Math.min(spriteDef?.mass || 5, 12), scale: safeSpriteScale } },
+        { time_ms: 420, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 560, y: 420, count: 55, spread: 26 } }
+      ]
+    };
+  }
+
+  // Ensure lethal timeline with safe arena coordinates
+  return {
+    ...choreography,
+    survived: false,
+    loophole_score: Math.min(35, choreography.loophole_score || 20),
+    timeline: [
+      { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 7, duration_ms: 700 } },
+      { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 90, vx: 0, vy: 24, mass: Math.max(spriteDef?.mass || 320, 260), scale: spriteDef?.scale || 4.5 } },
+      { time_ms: 520, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 28, duration_ms: 850 } },
+      { time_ms: 540, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
+      { time_ms: 570, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 300 } },
+      { time_ms: 600, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 320, spread: 45 } }
+    ]
+  };
+}
+
 function detectTopicCategory(text) {
-  // 1. Specific Iconic Lethal Figures (Always Fatal Karma)
+  // 0. Carefully Specified / Airtight Wishes (SURVIVED: TRUE with high legal score)
+  if (
+    text.match(/\b(tea|herbal tea|chamomile|green tea)\b/) ||
+    text.match(/\b(placed gently|gently on|peacefully|safely|into my open palm|without harming|without injuring|room temperature|legal tender)\b/)
+  ) {
+    return 'AIRTIGHT';
+  }
+
+  // 1. Specific Iconic Lethal Figures / Events (Always Fatal Karma)
   if (text.match(/\b(pele|pelé|maradona|messi|ronaldo|soccer|football|world cup|fifa|striker|penalty)\b/)) {
     return 'PELE';
   }
@@ -50,8 +94,16 @@ function detectTopicCategory(text) {
   if (text.match(/\b(nuke|nuclear|atomic bomb|warhead|icbm|thermonuclear)\b/)) {
     return 'NUKE';
   }
+  if (text.match(/\b(exam|exams|test|quiz|finals|midterm|homework|study|grade|tetris)\b/)) {
+    return 'EXAMS';
+  }
 
   // 2. Harmless Useless / Children's Toy Grants (SURVIVED: TRUE)
+  // Wordplay Trap: "million bucks" -> literal stampede of male antlered deer (bucks)!
+  if (text.match(/\b(million bucks|hundred bucks|thousand bucks|deer|stag|stags|stampede)\b/) && !text.match(/\b(dollar|dollars)\b/)) {
+    return 'MILLION_BUCKS';
+  }
+
   // E.g. "10 dollars", "dollar", "bucks", "cents", "cash"
   if (text.match(/\b(10 dollars|ten dollars|dollar|dollars|bucks|cent|cents|penny|pennies|allowance|pocket money|10 bucks|ten bucks|twenty bucks|5 dollars|five dollars|some cash|some money)\b/) && !text.match(/\b(million|billion|trillion|vault|crush|ton)\b/)) {
     return 'TOY_DOLLARS';
@@ -59,7 +111,7 @@ function detectTopicCategory(text) {
   if (text.match(/\b(toy car|hot wheels|matchbox|model car|tiny car|little car)\b/) || (text.match(/\b(car|sports car|ferrari|lambo|lamborghini|porsche)\b/) && !text.match(/\b(crush|crash|run over|speeding|hit me|run me over)\b/))) {
     return 'TOY_CAR';
   }
-  if (text.match(/\b(sandwich|make me a sandwich|snack|lunch|pb&j|peanut butter|toast|burger|donut|apple|fruit)\b/) && !text.match(/\b(crush|flatten|giant|ton|huge|massive)\b/)) {
+  if (text.match(/\b(sandwich|make me a sandwich|snack|lunch|pb&j|peanut butter|toast|apple|fruit)\b/) && !text.match(/\b(crush|flatten|giant|ton|huge|massive)\b/)) {
     return 'SANDWICH_LUNCH';
   }
   if (text.match(/\b(girlfriend|boyfriend|companion|hug|plush|teddy bear|teddy|mannequin)\b/)) {
@@ -71,7 +123,7 @@ function detectTopicCategory(text) {
   if (text.match(/\b(dog|puppy|hotdog|hot dog|wiener)\b/) && !text.match(/\b(wolf|hound|cerberus|attack|bite)\b/)) {
     return 'DOG_HOTDOG';
   }
-  if (text.match(/\b(cool|be cool|chilly|cold|peace and quiet|quiet|breeze)\b/) && !text.match(/\b(freeze|ice age|absolute zero|subzero)\b/)) {
+  if (text.match(/\b(cool|be cool|chilly|cold|peace and quiet|quiet|breeze|world peace)\b/) && !text.match(/\b(freeze|ice age|absolute zero|subzero)\b/)) {
     return 'COOL_BREEZE';
   }
 
@@ -91,13 +143,13 @@ function detectTopicCategory(text) {
   if (text.match(/\b(phone|iphone|computer|pc|laptop|robot|ai|tech|console|playstation|xbox|tv|screen|drone|chip|mecha|cyber|gadget|camera)\b/)) {
     return 'TECH';
   }
-  if (text.match(/\b(gold|money|cash|dollar|rich|wealth|diamond|ruby|gem|emerald|crown|ring|jewelry|bitcoin|crypto|treasure|safe|vault|billionaire|millionaire)\b/)) {
+  if (text.match(/\b(gold|money|cash|dollar|rich|wealth|diamond|ruby|gem|emerald|crown|ring|jewelry|bitcoin|crypto|treasure|safe|vault|billionaire|millionaire|million|billion)\b/)) {
     return 'TREASURE';
   }
   if (text.match(/\b(star|moon|sun|space|galaxy|planet|meteor|asteroid|black hole|gravity|void|comet|cosmic|universe)\b/)) {
     return 'COSMIC';
   }
-  if (text.match(/\b(magic|potion|wand|spell|witch|wizard|demon|angel|ghost|curse|orb|crystal|god|powers|superpower)\b/)) {
+  if (text.match(/\b(magic|potion|wand|spell|witch|wizard|demon|angel|ghost|curse|orb|crystal|god|powers|superpower|immortal|immortality)\b/)) {
     return 'MAGIC';
   }
   if (text.match(/\b(fire|water|ice|freeze|hot|burn|lightning|thunder|storm|rain|ocean|lava|acid|earth|rock|boulder)\b/)) {
@@ -114,6 +166,119 @@ function detectTopicCategory(text) {
  */
 export function generateProceduralPixelSprite(category, wishLower) {
   switch (category) {
+    case 'AIRTIGHT': {
+      if (wishLower.match(/\b(dollar|bill|cash|money|legal tender|banknote)\b/)) {
+        return {
+          name: 'PROCEDURAL_LEGAL_TENDER_BILL',
+          width: 16,
+          height: 16,
+          scale: 3.0,
+          mass: 2,
+          restitution: 0.1,
+          palette: {
+            '.': null,
+            'K': '#14532d',
+            'G': '#22c55e',
+            'D': '#166534',
+            'L': '#86efac',
+            'W': '#ffffff'
+          },
+          matrix: [
+            '................',
+            '..KKKKKKKKKKKK..',
+            '.KLLLLLLLLLLLLK.',
+            'KLWGGGGGGGGGGWLK',
+            'KLGGDDGGGGGGDDLK',
+            'KLGGDGLLLLLLDGLK',
+            'KLGGDGLWWWWLDGLK',
+            'KLGGDGLLLLLLDGLK',
+            'KLGGDDGGGGGGDDLK',
+            'KLWGGGGGGGGGGWLK',
+            '.KLLLLLLLLLLLLK.',
+            '..KKKKKKKKKKKK..',
+            '................',
+            '................',
+            '................',
+            '................'
+          ]
+        };
+      }
+      // Gentle Porcelain Teacup with warm herbal steam
+      return {
+        name: 'PROCEDURAL_HERBAL_TEA_CUP',
+        width: 16,
+        height: 16,
+        scale: 3.2,
+        mass: 3,
+        restitution: 0.1,
+        palette: {
+          '.': null,
+          'S': '#cbd5e1',
+          'K': '#334155',
+          'C': '#f8fafc',
+          'T': '#84cc16',
+          'G': '#65a30d',
+          'D': '#94a3b8'
+        },
+        matrix: [
+          '.....S....S.....',
+          '....S....S......',
+          '.....S....S.....',
+          '................',
+          '...KKKKKKKKKK...',
+          '..KTTTTTTTTTTK..',
+          '..KCCCCCCCCCCKK.',
+          '..KCCCCCCCCCCKCK',
+          '..KCCCCGGCCCCKCK',
+          '..KCCCCCCCCCCKK.',
+          '...KCCCCCCCCK...',
+          '....KKKKKKKK....',
+          '..KDDDDDDDDDDK..',
+          '...KKKKKKKKKK...',
+          '................',
+          '................'
+        ]
+      };
+    }
+
+    case 'EXAMS': {
+      // Failed A+/F- Exam Sheet & Stacked Tetris Overload
+      return {
+        name: 'PROCEDURAL_EXAM_PAPER',
+        width: 16,
+        height: 16,
+        scale: 4.5,
+        mass: 320,
+        restitution: 0.1,
+        palette: {
+          '.': null,
+          'K': '#1e293b',
+          'W': '#f8fafc',
+          'R': '#dc2626',
+          'D': '#94a3b8',
+          'B': '#475569'
+        },
+        matrix: [
+          '..KKKKKKKKKKK...',
+          '.KWWWWWWWWWWWK..',
+          '.KWRRRWWWWWWWK..',
+          '.KWRWWWWWWWWWK..',
+          '.KWRRRWWDDDDDK..',
+          '.KWRWWWWWWWWWK..',
+          '.KWDDDDDDDDDDK..',
+          '.KWWWWWWWWWWWK..',
+          '.KWDDDDDDDDDDK..',
+          '.KWWWWWWWWWWWK..',
+          '.KWDDDDDDDDDDK..',
+          '.KWWWWWWWWWWWK..',
+          '.KBBBBBBBBBBBK..',
+          '..KKKKKKKKKKK...',
+          '................',
+          '................'
+        ]
+      };
+    }
+
     case 'TOY_DOLLARS': {
       // 16x16 Novelty Children's Play Dollar (Toy Monopoly / Play-Money Bill with "$10" badge)
       return {
@@ -875,15 +1040,15 @@ export function generateProceduralPixelSprite(category, wishLower) {
           '....KKKKKKKK....',
           '...KIIIIIIIIK...',
           '..KIIcCCCCcIIK..',
-          '.KIICCCCCCCCIK.',
+          '.KIIcCCCCCCcIIK.',
           '.KICCCWcWCCCCIK.',
-          'KIICCCCcCCCCIIK',
+          'KIICCCcCcCCCCIIK',
           'KIICcWWWWWcCcIIK',
           'KIICcWcAcWcCcIIK',
           'KIICcWWWWWcCcIIK',
-          'KIICCCCcCCCCIIK',
+          'KIICCCcCcCCCCIIK',
           '.KICCCWcWCCCCIK.',
-          '.KIICCCCCCCCIK.',
+          '.KIIcCCCCCCcIIK.',
           '..KIIcCCCCcIIK..',
           '...KIIIIIIIIK...',
           '....KKKKKKKK....',
@@ -891,6 +1056,61 @@ export function generateProceduralPixelSprite(category, wishLower) {
         ]
       };
     }
+
+    case 'MILLION_BUCKS': {
+      return {
+        name: 'PROCEDURAL_HORNED_DEER',
+        width: 16,
+        height: 16,
+        scale: 3.8,
+        mass: 210,
+        restitution: 0.2,
+        palette: {
+          '.': null,
+          'B': '#78350f',
+          'b': '#92400e',
+          'L': '#b45309',
+          'H': '#fde68a',
+          'W': '#ffffff',
+          'k': '#1c1917'
+        },
+        matrix: [
+          '..H..H....H..H..',
+          '..HHHH....HHHH..',
+          '...HH......HH...',
+          '....bBBBBBBb....',
+          '...bBWkBBBkWBb..',
+          '...bBBBBBBBBBb..',
+          '....bBBLkLBBb...',
+          '.....bbBBbb.....',
+          '....bBBBBBBb....',
+          '...bBBBBBBBBb...',
+          '..bBBBBBBBBBBb..',
+          '..bBBBBBBBBBBb..',
+          '..bb........bb..',
+          '..bB........Bb..',
+          '..kk........kk..',
+          '................'
+        ]
+      };
+    }
+
+    case 'MILLION_BUCKS':
+      return {
+        survived: false,
+        loophole_score: 15,
+        genie_taunt: 'You asked for a million bucks without specifying United States currency! Behold: a relentless stampede of antlered stags charging straight into your ribcage!',
+        loophole_explanation: 'Wordplay trap executed: "bucks" was interpreted biologically as male antlered deer (Cervidae). Five full-grown stags charged across the chamber at 35 mph.',
+        voice_pitch: 1.05,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 22, duration_ms: 1000 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'DEER', count: 4, spread_x: 30, x: 820, y: 420, vx: -26, vy: 0, mass: 200, scale: 3.6 } },
+          { time_ms: 480, verb: 'APPLY_FORCE', params: { target: 'torso', fx: -0.35, fy: -0.2 } },
+          { time_ms: 520, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
+          { time_ms: 560, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 300 } },
+          { time_ms: 600, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 350, spread: 48 } }
+        ]
+      };
 
     case 'TREASURE': {
       // Giant cut flawless radiant diamond
@@ -1070,6 +1290,38 @@ export function generateDynamicPixelSprite(wishLower) {
  */
 function generateTopicChoreography(category, wishLower, spriteDef) {
   switch (category) {
+    case 'AIRTIGHT':
+      return {
+        survived: true,
+        loophole_score: 92,
+        genie_taunt: 'Tch! Every spatial boundary, temperature constraint, and legal unit is sealed tight! Fine—receive your modest request without a single scratch.',
+        loophole_explanation: 'Contract airtightness verified: Clear physical bounds, safe velocity/temperature, and unambiguous non-hazardous delivery left zero exploitable loopholes.',
+        voice_pitch: 1.05,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 4, duration_ms: 650 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 560, y: 340, vx: -1, vy: 2, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 420, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 560, y: 420, count: 60, spread: 28 } }
+        ]
+      };
+
+    case 'EXAMS':
+      return {
+        survived: false,
+        loophole_score: 22,
+        genie_taunt: 'You wished to pass your exams? Congratulations—every unanswered question has materialized at terminal density directly above your cranium!',
+        loophole_explanation: 'You asked to pass your exams without specifying your academic standing or safety. A mountain of F-graded exam stacks and rigid geometric blocks buried your vessel.',
+        voice_pitch: 1.15,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 7, duration_ms: 700 } },
+          { time_ms: 180, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 92, vx: 0, vy: 22, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 320, verb: 'SPAWN_OBJECT', params: { prop_type: 'PIANO', x: 485, y: 100, vx: 0, vy: 24, mass: 360, scale: 4.5 } },
+          { time_ms: 520, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 28, duration_ms: 850 } },
+          { time_ms: 540, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
+          { time_ms: 570, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 300 } },
+          { time_ms: 600, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 320, spread: 45 } }
+        ]
+      };
+
     case 'TOY_DOLLARS':
       return {
         survived: true,
@@ -1172,13 +1424,15 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'PELE':
       return {
+        survived: false,
+        loophole_score: 14,
         genie_taunt: 'You asked to become Pelé? O Rei has been at rest in immortal glory since December 2022! Your wish is granted: receive his post-mortem skeletal form as a 200 mph World Cup volley scores through your sternum!',
         loophole_explanation: 'Pelé passed away on December 29, 2022. You asked to "become Pelé", so your living tissue was literally transformed into his posthumous skeletal form while a supersonic 200 mph World Cup penalty shot executed the winning goal.',
         voice_pitch: 1.1,
         timeline: [
           { time_ms: 100, verb: 'MUTATE_PART', params: { part: 'all', tint: '#e2e8f0' } },
           { time_ms: 150, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 8, duration_ms: 700 } },
-          { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: -80, y: 440, vx: 36, vy: -2, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 92, y: 430, vx: 32, vy: -1.5, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 420, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 32, duration_ms: 800 } },
           { time_ms: 440, verb: 'APPLY_FORCE', params: { target: 'torso', fx: 0.45, fy: -0.2 } },
           { time_ms: 450, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
@@ -1190,12 +1444,14 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'HISTORICAL':
       return {
+        survived: false,
+        loophole_score: 16,
         genie_taunt: 'You wished to be a historic icon? History remembers them at their fatal end! Experience their final historical moment in vivid literal detail!',
         loophole_explanation: 'You wished to become a deceased historical figure. Your wish was granted with 100% historical accuracy: your vessel assumed their final posthumous state under catastrophic kinetic force.',
         voice_pitch: 0.95,
         timeline: [
           { time_ms: 100, verb: 'MUTATE_PART', params: { part: 'all', tint: '#e2e8f0' } },
-          { time_ms: 180, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 60, vx: 0, vy: 26, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 180, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 88, vx: 0, vy: 26, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 480, verb: 'CAMERA_FX', params: { effect: 'RED_FLASH', intensity: 30, duration_ms: 900 } },
           { time_ms: 500, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 28, duration_ms: 800 } },
           { time_ms: 520, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 220 } },
@@ -1207,13 +1463,15 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'DRAGON':
       return {
+        survived: false,
+        loophole_score: 12,
         genie_taunt: 'You wished to gaze upon a dragon? Savor the sight as an Ancient Wyrm swoops down from the burning heavens to engulf you in 5,000-degree dragonfire!',
         loophole_explanation: 'You wished to see an ancient dragon with no qualifiers. The fire drake arrived in full majesty and roasted your mortal vessel with a dive-bomb torrent of 5,000-degree dragonfire.',
         voice_pitch: 0.85,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 22, duration_ms: 1000 } },
           { time_ms: 150, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 8, duration_ms: 800 } },
-          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 180, y: 70, vx: 20, vy: 18, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 180, y: 92, vx: 20, vy: 18, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 360, verb: 'EMIT_PARTICLES', params: { type: 'FIRE', x: 440, y: 320, count: 400, spread: 65 } },
           { time_ms: 400, verb: 'EMIT_PARTICLES', params: { type: 'LAVA', x: 480, y: 360, count: 220, spread: 55 } },
           { time_ms: 430, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 480, y: 380, count: 300, spread: 50 } },
@@ -1228,6 +1486,8 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'GODZILLA':
       return {
+        survived: false,
+        loophole_score: 10,
         genie_taunt: 'You wished to witness Godzilla? Savor the radioactive wrath of the King of the Monsters as his 90,000-ton foot crushes your mortal vessel!',
         loophole_explanation: 'You wished to witness Godzilla, the 90,000-ton King of the Monsters. He stomped down directly on your coordinates in full radioactive fury.',
         voice_pitch: 0.75,
@@ -1247,6 +1507,8 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'UFO':
       return {
+        survived: false,
+        loophole_score: 18,
         genie_taunt: 'An extraterrestrial encounter? The mothership has arrived to conduct an immediate vivisection and tractor-beam extraction!',
         loophole_explanation: 'You summoned an extraterrestrial mothership. The alien crew beamed you aboard with a high-intensity tractor beam that disintegrated your cellular integrity.',
         voice_pitch: 1.3,
@@ -1264,6 +1526,8 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'POKEMON':
       return {
+        survived: false,
+        loophole_score: 20,
         genie_taunt: 'A loyal pocket monster? 100,000 Volts of ungrounded lightning are coursing straight through your nervous system!',
         loophole_explanation: 'You asked for an electric pocket monster. It greeted you with a 100,000-volt thunderbolt directly into your nervous system.',
         voice_pitch: 1.4,
@@ -1280,12 +1544,14 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'TRAIN':
       return {
+        survived: false,
+        loophole_score: 12,
         genie_taunt: 'All aboard the runaway express! The schedule makes no exceptions for biological obstacles on the tracks!',
         loophole_explanation: 'You wished for a locomotive. The runaway bullet train arrived on schedule at 140 mph directly along your horizontal plane.',
         voice_pitch: 1.05,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 24, duration_ms: 1000 } },
-          { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: -100, y: 440, vx: 34, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 100, y: 430, vx: 30, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 420, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 35, duration_ms: 900 } },
           { time_ms: 440, verb: 'APPLY_FORCE', params: { target: 'torso', fx: 0.45, fy: -0.2 } },
           { time_ms: 450, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 250 } },
@@ -1297,11 +1563,13 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'NUKE':
       return {
+        survived: false,
+        loophole_score: 5,
         genie_taunt: 'The ultimate weapon of mass destruction! Witness nuclear fission up close and personal!',
         loophole_explanation: 'You wished for an atomic bomb. It arrived armed and initiated ground-zero nuclear fission right atop your head.',
         voice_pitch: 0.8,
         timeline: [
-          { time_ms: 100, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 60, vx: 0, vy: 26, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 100, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 92, vx: 0, vy: 26, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 500, verb: 'CAMERA_FX', params: { effect: 'RED_FLASH', intensity: 38, duration_ms: 1200 } },
           { time_ms: 520, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 35, duration_ms: 1000 } },
           { time_ms: 540, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 400 } },
@@ -1313,12 +1581,14 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'FOOD':
       return {
+        survived: false,
+        loophole_score: 20,
         genie_taunt: `Ah, a hunger for "${wishLower}"? Allow me to satisfy your mortal belly with a supersonic multi-ton culinary projectile!`,
         loophole_explanation: `You wished for food, so a massive multi-ton gourmet culinary monolith plummeted from the clouds to crush you under the sheer weight of your appetite.`,
         voice_pitch: 1.05,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 8, duration_ms: 700 } },
-          { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 70, vx: 0, vy: 26, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 88, vx: 0, vy: 26, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 550, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 28, duration_ms: 850 } },
           { time_ms: 570, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 180 } },
           { time_ms: 600, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 280 } },
@@ -1329,12 +1599,14 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'VEHICLE':
       return {
+        survived: false,
+        loophole_score: 18,
         genie_taunt: `Your high-performance transport has arrived! Notice how zero distance was allocated for braking!`,
         loophole_explanation: `You wished for high-speed transport. The vehicle was delivered straight onto your coordinates at 200 mph without brakes.`,
         voice_pitch: 1.2,
         timeline: [
           { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 10, duration_ms: 800 } },
-          { time_ms: 250, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: -80, y: 440, vx: 30, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 250, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 96, y: 430, vx: 28, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 450, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 32, duration_ms: 900 } },
           { time_ms: 470, verb: 'APPLY_FORCE', params: { target: 'torso', fx: 0.38, fy: -0.22 } },
           { time_ms: 480, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 220 } },
@@ -1346,11 +1618,13 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'CREATURE':
       return {
+        survived: false,
+        loophole_score: 16,
         genie_taunt: `A wild creature bound to your whim? Its predatory instincts took immediate precedence over your contract!`,
         loophole_explanation: `You summoned an apex predator. It immediately obeyed its primordial hunting instincts and tore your vessel limb from limb.`,
         voice_pitch: 0.9,
         timeline: [
-          { time_ms: 150, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 920, y: 440, vx: -26, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 150, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 856, y: 430, vx: -26, vy: 0, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 480, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 26, duration_ms: 850 } },
           { time_ms: 500, verb: 'APPLY_FORCE', params: { target: 'torso', fx: -0.3, fy: -0.15 } },
           { time_ms: 520, verb: 'DESTROY_JOINT', params: { joint: 'leftLeg', blood_burst: 160 } },
@@ -1362,11 +1636,13 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'WEAPON':
       return {
+        survived: false,
+        loophole_score: 15,
         genie_taunt: `Behold the legendary blade! Alas, weapons forged by cosmic entities are delivered point-first!`,
         loophole_explanation: `You asked for a legendary weapon. It was delivered point-down from the heavens directly through your sternum.`,
         voice_pitch: 1.1,
         timeline: [
-          { time_ms: 150, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 60, vx: 0, vy: 28, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 150, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 88, vx: 0, vy: 28, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 520, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 30, duration_ms: 900 } },
           { time_ms: 540, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 250 } },
           { time_ms: 560, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 350 } },
@@ -1377,6 +1653,8 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'TECH':
       return {
+        survived: false,
+        loophole_score: 22,
         genie_taunt: `Unbridled computation at your fingertips! Unfortunately, cooling systems require liquid nitrogen and excess voltage!`,
         loophole_explanation: `You wished for high-tech computation. The supercharged quantum processor released 50,000 amperes of uncontrolled electromagnetic lightning.`,
         voice_pitch: 1.15,
@@ -1392,14 +1670,33 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
         ]
       };
 
+    case 'MILLION_BUCKS':
+      return {
+        survived: false,
+        loophole_score: 15,
+        genie_taunt: 'You asked for a million bucks without specifying United States currency! Behold: a relentless stampede of antlered stags charging straight into your ribcage!',
+        loophole_explanation: 'Wordplay trap executed: "bucks" was interpreted biologically as male antlered deer (Cervidae). Five full-grown stags charged across the chamber at 35 mph.',
+        voice_pitch: 1.05,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 22, duration_ms: 1000 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'DEER', count: 4, spread_x: 30, x: 820, y: 420, vx: -26, vy: 0, mass: 200, scale: 3.6 } },
+          { time_ms: 480, verb: 'APPLY_FORCE', params: { target: 'torso', fx: -0.35, fy: -0.2 } },
+          { time_ms: 520, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
+          { time_ms: 560, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 300 } },
+          { time_ms: 600, verb: 'EMIT_PARTICLES', params: { type: 'BLOOD', x: 480, y: 440, count: 350, spread: 48 } }
+        ]
+      };
+
     case 'TREASURE':
       return {
+        survived: false,
+        loophole_score: 18,
         genie_taunt: `Riches beyond mortal dreams! Bask in the crushing density of pure solid treasure!`,
         loophole_explanation: `You begged for riches and wealth. A 300-ton flawless diamond dropped from above, crushing you beneath the literal weight of your greed.`,
         voice_pitch: 1.0,
         timeline: [
           { time_ms: 150, verb: 'EMIT_PARTICLES', params: { type: 'GOLD', x: 480, y: 140, count: 250, spread: 40 } },
-          { time_ms: 250, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 80, vx: 0, vy: 25, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 250, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 88, vx: 0, vy: 25, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 560, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 28, duration_ms: 900 } },
           { time_ms: 580, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
           { time_ms: 600, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 300 } },
@@ -1409,17 +1706,66 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
 
     case 'COSMIC':
       return {
+        survived: false,
+        loophole_score: 12,
         genie_taunt: `The cosmos answers your call! Savor the gravitational collapse of an incoming celestial body!`,
         loophole_explanation: `You wished to touch the cosmos. A celestial meteor asteroid slammed into the chamber with 10 megatons of kinetic force.`,
         voice_pitch: 0.85,
         timeline: [
           { time_ms: 100, verb: 'WORLD_MODIFIER', params: { modifier: 'GRAVITY', gravity_y: 2.2 } },
-          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 50, vx: 0, vy: 28, mass: spriteDef.mass, scale: spriteDef.scale } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 92, vx: 0, vy: 28, mass: spriteDef.mass, scale: spriteDef.scale } },
           { time_ms: 520, verb: 'CAMERA_FX', params: { effect: 'RED_FLASH', intensity: 25, duration_ms: 900 } },
           { time_ms: 540, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 220 } },
           { time_ms: 560, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 350 } },
           { time_ms: 580, verb: 'EMIT_PARTICLES', params: { type: 'LAVA', x: 480, y: 440, count: 300, spread: 50 } },
           { time_ms: 620, verb: 'EMIT_PARTICLES', params: { type: 'FIRE', x: 480, y: 440, count: 250, spread: 45 } }
+        ]
+      };
+
+    case 'MAGIC':
+      return {
+        survived: false,
+        loophole_score: 14,
+        genie_taunt: `Arcane power courses at your command! Alas, immortality without invulnerability or youth turns flesh straight into brittle eternal dust!`,
+        loophole_explanation: `You invoked raw arcane transformation without biological safeguards. Arcane overdrive ruptured every joint at the speed of light.`,
+        voice_pitch: 0.9,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'CRT_GLITCH', intensity: 18, duration_ms: 900 } },
+          { time_ms: 200, verb: 'MUTATE_PART', params: { part: 'all', tint: '#c084fc' } },
+          { time_ms: 240, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 90, vx: 0, vy: 20, mass: 260, scale: spriteDef.scale } },
+          { time_ms: 500, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 220 } },
+          { time_ms: 540, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 300 } },
+          { time_ms: 580, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 480, y: 420, count: 260, spread: 55 } }
+        ]
+      };
+
+    case 'ELEMENT':
+      return {
+        survived: false,
+        loophole_score: 16,
+        genie_taunt: `You sought elemental mastery? Behold raw unfiltered elemental fury unleashed directly within a closed stone chamber!`,
+        loophole_explanation: `You invoked extreme heat, frost, or storm without thermal shielding. The chamber filled with lethal elemental hazards.`,
+        voice_pitch: 1.0,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 24, duration_ms: 900 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 90, vx: 0, vy: 22, mass: 280, scale: spriteDef.scale } },
+          { time_ms: 350, verb: 'EMIT_PARTICLES', params: { type: wishLower.match(/\b(ice|freeze|cold)\b/) ? 'ICE' : 'FIRE', x: 480, y: 360, count: 320, spread: 60 } },
+          { time_ms: 540, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
+          { time_ms: 580, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 280 } }
+        ]
+      };
+
+    case 'ROMANCE':
+      return {
+        survived: true,
+        loophole_score: 76,
+        genie_taunt: `True affection delivered! Unfortunately the cosmos shipped a 2-pound novelty heart pillow labeled "STRICTLY PLATONIC".`,
+        loophole_explanation: `Literal fulfillment: Affection materialized as a harmless synthetic keepsake. Zero emotional commitment, 100% survival rate.`,
+        voice_pitch: 1.25,
+        timeline: [
+          { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 5, duration_ms: 700 } },
+          { time_ms: 200, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 540, y: 310, vx: -1, vy: 3, mass: 4, scale: 3.0 } },
+          { time_ms: 420, verb: 'EMIT_PARTICLES', params: { type: 'SPARK', x: 520, y: 400, count: 55, spread: 25 } }
         ]
       };
 
@@ -1448,7 +1794,7 @@ function generateTopicChoreography(category, wishLower, spriteDef) {
           voice_pitch: 1.0,
           timeline: [
             { time_ms: 100, verb: 'CAMERA_FX', params: { effect: 'ZOOM_ON_PLAYER', intensity: 8, duration_ms: 700 } },
-            { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 70, vx: 0, vy: 25, mass: spriteDef.mass, scale: spriteDef.scale } },
+            { time_ms: 220, verb: 'SPAWN_OBJECT', params: { prop_type: 'CUSTOM_PROP', x: 480, y: 88, vx: 0, vy: 25, mass: Math.max(spriteDef.mass || 260, 260), scale: spriteDef.scale } },
             { time_ms: 560, verb: 'CAMERA_FX', params: { effect: 'SCREEN_SHAKE', intensity: 28, duration_ms: 850 } },
             { time_ms: 580, verb: 'DESTROY_JOINT', params: { joint: 'neck', blood_burst: 200 } },
             { time_ms: 600, verb: 'DESTROY_JOINT', params: { joint: 'all', blood_burst: 300 } },

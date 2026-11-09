@@ -6,5 +6,16 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          physics: ['matter-js'],
+          ui: ['lucide-react', 'canvas-confetti']
+        }
+      }
+    }
   }
 });

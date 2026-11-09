@@ -136,7 +136,15 @@ export class VFXSystem {
         color = Math.random() < 0.5 ? '#f8f9fa' : '#fbbf24';
         size = 3;
         bounce = 0.55;
-      } else if (pUpper.includes('METEOR') || pUpper.includes('FIRE')) {
+      } else if (
+        pUpper.includes('METEOR') ||
+        pUpper.includes('FIRE') ||
+        pUpper.includes('DRAGON') ||
+        pUpper.includes('WYRM') ||
+        pUpper.includes('NUKE') ||
+        pUpper.includes('BOMB') ||
+        pUpper.includes('LAVA')
+      ) {
         debrisType = 'fire_spark';
         color = Math.random() < 0.5 ? '#ef4444' : '#f97316';
         size = 4;
@@ -166,22 +174,39 @@ export class VFXSystem {
     }
 
     // Expanding Ground Shockwave Ring
-    this.shockwaves.push({
-      x,
-      y: 504,
-      radiusX: 8,
-      radiusY: 4,
-      maxRadiusX: 110 * Math.min(2.0, intensity),
-      maxRadiusY: 18 * Math.min(2.0, intensity),
-      speed: 7.5 * intensity,
-      alpha: 0.85,
-      color: '#f8fafc'
-    });
+    this.spawnShockwave(x, 504, intensity, '#f8fafc');
 
     // Procedural Ground Fractures
     if (intensity > 0.8) {
       this.spawnFracture(x, 504, 3 + Math.floor(intensity * 2));
     }
+  }
+
+  spawnShockwave(x, y = 504, intensity = 1.0, color = '#f8fafc') {
+    const safeIntensity = Math.max(0.4, Math.min(3.0, Number(intensity) || 1.0));
+    this.shockwaves.push({
+      x,
+      y,
+      radiusX: 8,
+      radiusY: 4,
+      maxRadiusX: 110 * Math.min(2.0, safeIntensity),
+      maxRadiusY: 18 * Math.min(2.0, safeIntensity),
+      speed: 7.5 * safeIntensity,
+      alpha: 0.85,
+      color
+    });
+  }
+
+  reset() {
+    this.emotes = [];
+    this.floatingTexts = [];
+    this.debris = [];
+    this.shockwaves = [];
+    this.cracks = [];
+    this.ghosts = [];
+    this.speedLines = [];
+    this.hitStopFrames = 0;
+    this.dustMotes = this.dustMotes.filter((m) => m.life === undefined);
   }
 
   // Stone slab fracture cracks on massive collisions
@@ -238,6 +263,7 @@ export class VFXSystem {
         vy: -2.5 - Math.random() * 3.0,
         radius: 2 + Math.random() * 2,
         alpha: 0.9,
+        phase: Math.random() * Math.PI * 2,
         life: 45 + Math.floor(Math.random() * 25),
         isEmber: true
       });
@@ -253,6 +279,9 @@ export class VFXSystem {
   recordSpeedStreak(body, spriteKey = 'GENERIC') {
     const speed = Math.hypot(body.velocity.x, body.velocity.y);
     if (speed > 8.0) {
+      if (this.speedLines.length >= 160) {
+        this.speedLines.shift();
+      }
       this.speedLines.push({
         x: body.position.x + (Math.random() - 0.5) * 28,
         y: body.position.y - 20 - Math.random() * 10,
@@ -347,15 +376,21 @@ export class VFXSystem {
 
     // 5. Update Ambient Dust Motes
     this.dustMotes.forEach((mote) => {
-      mote.phase += 0.03;
+      mote.phase = (mote.phase || 0) + 0.03;
       mote.x += mote.vx + Math.sin(mote.phase) * 0.35;
       mote.y += mote.vy;
 
-      // Wrap around bounds
-      if (mote.y < 36) mote.y = 500;
-      if (mote.x < 36) mote.x = 920;
-      if (mote.x > 920) mote.x = 36;
+      if (mote.life !== undefined) {
+        mote.life--;
+        if (mote.life < 20) mote.alpha = Math.max(0, mote.life / 20);
+      } else {
+        // Wrap around bounds for permanent ambient dust
+        if (mote.y < 36) mote.y = 500;
+        if (mote.x < 36) mote.x = 920;
+        if (mote.x > 920) mote.x = 36;
+      }
     });
+    this.dustMotes = this.dustMotes.filter((m) => m.life === undefined || m.life > 0);
 
     // 6. Update Ascending Souls
     this.ghosts.forEach((g) => {
@@ -396,10 +431,7 @@ export class VFXSystem {
   render(ctx) {
     ctx.save();
 
-    // 1. Render Ground Cracks
-    this.renderCracks(ctx);
-
-    // 2. Render Expanding Shockwaves
+    // 1. Render Expanding Shockwaves (Ground cracks are rendered prior on floor layer)
     this.renderShockwaves(ctx);
 
     // 3. Render Speed Lines & High-Speed Drag

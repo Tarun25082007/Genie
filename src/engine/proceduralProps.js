@@ -5,6 +5,7 @@ import { PIXEL_SPRITES } from '../data/themes.js';
 const { Bodies, Body } = Matter;
 
 const spriteCanvasCache = new Map();
+const MAX_SPRITE_CANVAS_CACHE = 120;
 
 /**
  * Converts a 16x16 or 24x24 string matrix into an offscreen HTMLCanvasElement
@@ -55,6 +56,10 @@ export function getOffscreenPixelSprite(spriteKeyOrDef, pixelSize = 3) {
     }
   }
 
+  if (spriteCanvasCache.size >= MAX_SPRITE_CANVAS_CACHE) {
+    const oldestKey = spriteCanvasCache.keys().next().value;
+    if (oldestKey !== undefined) spriteCanvasCache.delete(oldestKey);
+  }
   spriteCanvasCache.set(cacheKey, canvas);
   return canvas;
 }
@@ -119,10 +124,10 @@ export function createTetrisBody(shapeKey = 'TETRIS_T', x = 480, y = 90, tileSiz
 /**
  * Builds Matter.js bodies according to SPAWN_OBJECT verb params & customPropDef
  */
-export function createPropFromVerb(params, customPropDef) {
+export function createPropFromVerb(params = {}, customPropDef = null) {
   const bodies = [];
-  const count = params.count || 1;
-  const spreadX = params.spread_x || 40;
+  const count = Math.max(1, Math.min(20, params.count ?? 1));
+  const spreadX = params.spread_x ?? 40;
   const startX = params.x ?? 480;
   const startY = params.y ?? 90;
 
@@ -132,189 +137,224 @@ export function createPropFromVerb(params, customPropDef) {
 
   for (let i = 0; i < count; i++) {
     const offsetX = count > 1 ? (i - (count - 1) / 2) * spreadX : 0;
-    const x = startX + offsetX;
-    const y = startY - i * 30;
+    const rawX = startX + offsetX;
+    const rawY = startY - i * 30;
     const rawProp = String(params.prop_type || 'CUSTOM_PROP').toUpperCase();
     let body;
 
     if (rawProp.startsWith('TETRIS_')) {
-      const tileSize = (params.scale || 4) * 5;
-      body = createTetrisBody(rawProp, x, y, tileSize);
+      const tileSize = (params.scale ?? 4) * 5;
+      const clampedX = Math.max(80, Math.min(840, rawX));
+      const clampedY = Math.max(60, Math.min(460, rawY));
+      body = createTetrisBody(rawProp, clampedX, clampedY, tileSize);
     } else if (effectiveCustomProp && (rawProp === 'CUSTOM_PROP' || rawProp === 'CUSTOM' || !PIXEL_SPRITES[rawProp])) {
       // Whenever a custom prop is provided, render its unique 16x16 pixel sprite!
-      const scale = effectiveCustomProp.scale || params.scale || 4.5;
+      const scale = params.scale ?? effectiveCustomProp.scale ?? 4.5;
       const w = 16 * scale;
       const h = 16 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: effectiveCustomProp.mass || params.mass || 350,
-        restitution: effectiveCustomProp.restitution || 0.1,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? effectiveCustomProp.mass ?? 350,
+        restitution: params.restitution ?? effectiveCustomProp.restitution ?? 0.1,
         friction: 0.8,
         label: `prop_${(effectiveCustomProp.name || 'custom').toLowerCase()}`
       });
       body.customData = {
         propType: 'custom_sprite',
         customDef: effectiveCustomProp,
+        scale,
         width: w,
         height: h
       };
     } else if (rawProp.includes('SANDWICH') || rawProp.includes('BLT') || rawProp.includes('SUB') || rawProp.includes('BURGER')) {
-      const scale = params.scale || 4.5;
+      const scale = params.scale ?? 4.5;
       const w = 18 * scale;
       const h = 16 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 400,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 400,
         restitution: 0.05,
         friction: 0.9,
         label: 'prop_sandwich'
       });
       body.customData = { propType: 'sandwich', width: w, height: h, spriteKey: 'GIANT_SANDWICH', scale };
     } else if (rawProp.includes('CAR') || rawProp.includes('VEHICLE') || rawProp.includes('AUTO')) {
-      const scale = params.scale || 4;
+      const scale = params.scale ?? 4;
       const w = 24 * scale;
       const h = 12 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 450,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 450,
         restitution: 0.2,
         friction: 0.7,
         label: 'prop_car'
       });
       body.customData = { propType: 'car', width: w, height: h, spriteKey: 'SPORTS_CAR', scale };
     } else if (rawProp.includes('BALLOON') || rawProp.includes('HELIUM')) {
-      const scale = params.scale || 3.5;
+      const scale = params.scale ?? 3.5;
       const r = 8 * scale;
-      body = Bodies.circle(x, y, r, {
-        mass: params.mass || 2,
+      const clampedX = Math.max(36 + r + 4, Math.min(924 - r - 4, rawX));
+      const clampedY = Math.max(36 + r + 4, Math.min(504 - r - 4, rawY));
+      body = Bodies.circle(clampedX, clampedY, r, {
+        mass: params.mass ?? 2,
         restitution: 0.6,
         frictionAir: 0.05,
         label: 'prop_balloon'
       });
       body.customData = { propType: 'balloon', radius: r, spriteKey: 'BALLOON', scale, buoyant: true };
     } else if (rawProp.includes('EXAM') || rawProp.includes('PAPER') || rawProp.includes('SHEET') || rawProp.includes('BOOK')) {
-      const scale = params.scale || 3;
+      const scale = params.scale ?? 3;
       const w = 16 * scale;
       const h = 18 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 1.5,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 1.5,
         frictionAir: 0.12,
         restitution: 0.2,
         label: 'prop_exam_sheet'
       });
       body.customData = { propType: 'exam_sheet', width: w, height: h, spriteKey: 'EXAM_SHEET', scale, flutter: true };
     } else if (rawProp.includes('DEER') || rawProp.includes('BUCK') || rawProp.includes('STAMPEDE') || rawProp.includes('STAG')) {
-      const scale = params.scale || 3.5;
+      const scale = params.scale ?? 3.5;
       const w = 18 * scale;
       const h = 16 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 180,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 180,
         restitution: 0.2,
         friction: 0.4,
         label: 'prop_deer'
       });
       body.customData = { propType: 'deer', width: w, height: h, spriteKey: 'HORNED_DEER', scale, charge: true };
     } else if (rawProp.includes('PIANO')) {
-      const scale = params.scale || 4.5;
+      const scale = params.scale ?? 4.5;
       const w = 22 * scale;
       const h = 16 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 550,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 550,
         restitution: 0.1,
         friction: 0.8,
         label: 'prop_piano'
       });
       body.customData = { propType: 'piano', width: w, height: h, spriteKey: 'GRAND_PIANO', scale };
     } else if (rawProp.includes('BELL')) {
-      const scale = params.scale || 4.5;
+      const scale = params.scale ?? 4.5;
       const w = 18 * scale;
       const h = 20 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 600,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 600,
         restitution: 0.15,
         friction: 0.85,
         label: 'prop_bell'
       });
       body.customData = { propType: 'bell', width: w, height: h, spriteKey: 'GIANT_BELL', scale };
     } else if (rawProp.includes('SARCOPHAGUS') || rawProp.includes('COFFIN') || rawProp.includes('TOMB')) {
-      const scale = params.scale || 4.5;
+      const scale = params.scale ?? 4.5;
       const w = 18 * scale;
       const h = 24 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 850,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 850,
         restitution: 0.05,
         friction: 0.9,
         label: 'prop_sarcophagus'
       });
       body.customData = { propType: 'sarcophagus', width: w, height: h, spriteKey: 'TUNGSTEN_SARCOPHAGUS', scale };
     } else if (rawProp.includes('SAFE') || rawProp.includes('VAULT') || rawProp.includes('CHEST')) {
-      const scale = params.scale || 4.5;
+      const scale = params.scale ?? 4.5;
       const w = 18 * scale;
       const h = 18 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 950,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 950,
         restitution: 0.05,
         friction: 0.95,
         label: 'prop_safe'
       });
       body.customData = { propType: 'safe', width: w, height: h, spriteKey: 'SAFE', scale };
     } else if (rawProp.includes('STATUE') || rawProp.includes('FRIEND') || rawProp.includes('MANNEQUIN') || rawProp.includes('GOLEM')) {
-      const scale = params.scale || 4.5;
+      const scale = params.scale ?? 4.5;
       const w = 18 * scale;
       const h = 26 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 650,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 650,
         restitution: 0.08,
         friction: 0.85,
         label: 'prop_statue'
       });
       body.customData = { propType: 'statue', width: w, height: h, spriteKey: 'STATUE_FRIEND', scale };
     } else if (rawProp.includes('METEOR') || rawProp.includes('ASTEROID') || rawProp.includes('ROCK') || rawProp.includes('BOULDER')) {
-      const scale = params.scale || 4;
+      const scale = params.scale ?? 4;
       const r = 10 * scale;
-      body = Bodies.circle(x, y, r, {
-        mass: params.mass || 320,
+      const clampedX = Math.max(36 + r + 4, Math.min(924 - r - 4, rawX));
+      const clampedY = Math.max(36 + r + 4, Math.min(504 - r - 4, rawY));
+      body = Bodies.circle(clampedX, clampedY, r, {
+        mass: params.mass ?? 320,
         restitution: 0.2,
         friction: 0.6,
         label: 'prop_meteor'
       });
       body.customData = { propType: 'meteor', radius: r, spriteKey: 'METEOR', scale };
     } else if (rawProp.includes('GOLD') || rawProp.includes('COIN') || rawProp.includes('BULLION') || rawProp.includes('CASH') || rawProp.includes('MONEY')) {
-      const scale = params.scale || 3;
+      const scale = params.scale ?? 3;
       const w = 16 * scale;
       const h = 8 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 60,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 60,
         restitution: 0.4,
         friction: 0.5,
         label: 'prop_gold_bar'
       });
-      body.customData = { propType: 'gold_bar', width: w, height: h, spriteKey: 'GOLD_BAR' };
+      body.customData = { propType: 'gold_bar', width: w, height: h, spriteKey: 'GOLD_BAR', scale };
     } else if (rawProp.includes('SPIKE') || rawProp.includes('MACE') || rawProp.includes('BOMB')) {
-      const scale = params.scale || 4;
+      const scale = params.scale ?? 4;
       const r = 8 * scale;
-      body = Bodies.circle(x, y, r, {
-        mass: params.mass || 120,
+      const clampedX = Math.max(36 + r + 4, Math.min(924 - r - 4, rawX));
+      const clampedY = Math.max(36 + r + 4, Math.min(504 - r - 4, rawY));
+      body = Bodies.circle(clampedX, clampedY, r, {
+        mass: params.mass ?? 120,
         restitution: 0.3,
         friction: 0.6,
         label: 'prop_spike_ball'
       });
-      body.customData = { propType: 'spike_ball', radius: r, spriteKey: 'SPIKE_BALL' };
+      body.customData = { propType: 'spike_ball', radius: r, spriteKey: 'SPIKE_BALL', scale };
     } else if (rawProp.includes('ANVIL') || rawProp.includes('WEIGHT') || rawProp.includes('HAMMER')) {
-      const scale = params.scale || 4;
+      const scale = params.scale ?? 4;
       const w = 18 * scale;
       const h = 14 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 200,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 200,
         density: 0.08,
         restitution: 0.05,
         friction: 0.9,
         label: 'prop_anvil'
       });
-      body.customData = { propType: 'anvil', width: w, height: h };
+      body.customData = { propType: 'anvil', width: w, height: h, spriteKey: 'ANVIL', scale };
     } else if (PIXEL_SPRITES[rawProp]) {
-      const scale = params.scale || 4;
+      const scale = params.scale ?? 4;
       const w = 16 * scale;
       const h = 16 * scale;
-      body = Bodies.rectangle(x, y, w, h, {
-        mass: params.mass || 150,
+      const clampedX = Math.max(36 + w / 2 + 4, Math.min(924 - w / 2 - 4, rawX));
+      const clampedY = Math.max(36 + h / 2 + 4, Math.min(504 - h / 2 - 4, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, w, h, {
+        mass: params.mass ?? 150,
         restitution: 0.1,
         friction: 0.8,
         label: `prop_${rawProp.toLowerCase()}`
@@ -322,18 +362,20 @@ export function createPropFromVerb(params, customPropDef) {
       body.customData = { propType: 'custom_sprite', spriteKey: rawProp, width: w, height: h, scale };
     } else {
       // Fallback
-      body = Bodies.rectangle(x, y, 40, 40, {
-        mass: params.mass || 50,
+      const clampedX = Math.max(60, Math.min(900, rawX));
+      const clampedY = Math.max(60, Math.min(480, rawY));
+      body = Bodies.rectangle(clampedX, clampedY, 40, 40, {
+        mass: params.mass ?? 50,
         restitution: 0.2,
         label: 'prop_generic'
       });
       body.customData = { propType: 'generic', width: 40, height: 40 };
     }
 
-    // Set Initial Velocities
+    // Set Initial Velocities (preserve 0 using nullish coalescing!)
     Body.setVelocity(body, {
-      x: params.vx || 0,
-      y: params.vy || 16
+      x: params.vx ?? 0,
+      y: params.vy ?? 16
     });
 
     if (params.angularVelocity) {
@@ -368,7 +410,7 @@ export function renderPropBody(ctx, body) {
       ctx.strokeRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
     });
   } else if (propType === 'custom_sprite' && custom.customDef) {
-    const offscreen = getOffscreenPixelSprite(custom.customDef, custom.customDef.scale || 4);
+    const offscreen = getOffscreenPixelSprite(custom.customDef, custom.scale ?? custom.customDef.scale ?? 4);
     if (offscreen) {
       ctx.drawImage(offscreen, -offscreen.width / 2, -offscreen.height / 2);
     }

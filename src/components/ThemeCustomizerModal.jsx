@@ -38,7 +38,6 @@ export default function ThemeCustomizerModal({
   const [isCreatingCustom, setIsCreatingCustom] = useState(false);
 
   const activeTheme = themes[currentThemeId] || themes.djinn_classic || THEME_SETS.djinn_classic;
-  const isBuiltInTheme = !!THEME_SETS[currentThemeId];
 
   const player = customization?.player || DEFAULT_CUSTOMIZATION.player;
   const genie = customization?.genie || activeTheme.genieDefaults || DEFAULT_CUSTOMIZATION.genie;
@@ -493,7 +492,7 @@ export default function ThemeCustomizerModal({
   const handleDeleteTheme = (themeId, e) => {
     e.stopPropagation();
     audioSynth.playCrunch();
-    if (confirm(`Are you sure you want to delete this custom theme?`)) {
+    if (window.confirm('Are you sure you want to delete this custom theme?')) {
       deleteCustomTheme(themeId);
       refreshThemes();
       if (currentThemeId === themeId) {
@@ -507,8 +506,18 @@ export default function ThemeCustomizerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-5 bg-black/85 backdrop-blur-md select-none">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Themes and Character Customizer"
+      onClick={() => {
+        audioSynth.playButton();
+        onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-5 bg-black/85 backdrop-blur-md select-none"
+    >
       <div
+        onClick={(e) => e.stopPropagation()}
         className="w-full max-w-3xl rounded-2xl border-2 p-5 shadow-2xl max-h-[94vh] overflow-y-auto"
         style={{
           backgroundColor: activeTheme.chamberColors?.bgBottom || '#0f2922',
@@ -530,6 +539,8 @@ export default function ThemeCustomizerModal({
             </div>
           </div>
           <button
+            type="button"
+            aria-label="Close themes modal"
             onClick={() => {
               audioSynth.playButton();
               onClose();
@@ -545,6 +556,7 @@ export default function ThemeCustomizerModal({
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-slate-300 font-pixel">ACTIVE REALM THEME</span>
             <button
+              type="button"
               onClick={() => {
                 audioSynth.playButton();
                 setIsCreatingCustom(!isCreatingCustom);
@@ -561,57 +573,63 @@ export default function ThemeCustomizerModal({
               const isSelected = th.id === currentThemeId;
               const isCustom = !THEME_SETS[th.id];
               return (
-                <button
+                <div
                   key={th.id}
-                  onClick={() => {
-                    audioSynth.playButton();
-                    onSelectTheme(th.id);
-                    onUpdateCustomization({
-                      player,
-                      genie: { ...th.genieDefaults }
-                    });
-                    const themeKey = th.id === 'shenron_dragon' ? 'shenron' : th.id === 'corporate_demon' ? 'demon' : 'djinn';
-                    audioSynth.startAmbientMusic(themeKey);
-                  }}
-                  className={`relative p-2.5 rounded-xl border text-left transition-all ${
+                  className={`relative rounded-xl border transition-all ${
                     isSelected
                       ? 'bg-black/60 shadow-lg border-2'
-                      : 'bg-black/30 hover:bg-black/50 border-slate-700/60 opacity-80'
+                      : 'bg-black/30 hover:bg-black/50 border-slate-700/60 opacity-85'
                   }`}
                   style={{
                     borderColor: isSelected ? (th.chamberColors?.accentHex || '#10b981') : 'rgba(51, 65, 85, 0.6)'
                   }}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-pixel text-[11px] font-bold text-slate-100 truncate">
-                      {th.name.split(':')[0]}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
-                      {isCustom && (
-                        <div
-                          onClick={(e) => handleDeleteTheme(th.id, e)}
-                          title="Delete Custom Theme"
-                          className="p-1 hover:text-rose-400 text-slate-500 rounded cursor-pointer"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div
-                    className="w-full h-1.5 rounded-full mb-1"
-                    style={{
-                      background: `linear-gradient(to right, ${th.chamberColors?.bgTop || '#111'}, ${th.chamberColors?.accentHex || '#10b981'})`
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioSynth.playButton();
+                      onSelectTheme(th.id);
+                      onUpdateCustomization({
+                        player,
+                        genie: { ...th.genieDefaults }
+                      });
+                      const themeKey = th.id === 'shenron_dragon' ? 'shenron' : th.id === 'corporate_demon' ? 'demon' : 'djinn';
+                      audioSynth.startAmbientMusic(themeKey);
                     }}
-                  />
-                  <span className="text-[10px] text-slate-300 font-pixel block truncate font-bold">
-                    {th.name.includes(':') ? th.name.split(':')[1]?.trim() : th.name}
-                  </span>
-                  <span className="text-[9px] text-slate-400 font-pixel block">
-                    {th.maxWishes} Wishes Max {isCustom && '• [Custom]'}
-                  </span>
-                </button>
+                    className="w-full p-2.5 text-left rounded-xl"
+                  >
+                    <div className="flex items-center justify-between mb-1 pr-6">
+                      <span className="font-pixel text-[11px] font-bold text-slate-100 truncate">
+                        {th.name.split(':')[0]}
+                      </span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                    </div>
+                    <div
+                      className="w-full h-1.5 rounded-full mb-1"
+                      style={{
+                        background: `linear-gradient(to right, ${th.chamberColors?.bgTop || '#111'}, ${th.chamberColors?.accentHex || '#10b981'})`
+                      }}
+                    />
+                    <span className="text-[10px] text-slate-300 font-pixel block truncate font-bold">
+                      {th.name.includes(':') ? th.name.split(':')[1]?.trim() : th.name}
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-pixel block">
+                      {th.maxWishes} Wishes Max {isCustom && '• [Custom]'}
+                    </span>
+                  </button>
+
+                  {isCustom && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteTheme(th.id, e)}
+                      aria-label={`Delete custom theme ${th.name}`}
+                      title="Delete Custom Theme"
+                      className="absolute top-2 right-2 p-1 hover:text-rose-400 text-slate-500 rounded transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -636,6 +654,7 @@ export default function ThemeCustomizerModal({
                 return (
                   <button
                     key={variant.id}
+                    type="button"
                     onClick={() => handleSelectVariant(variant)}
                     className={`p-2 rounded-lg border text-left transition-all ${
                       isVariantActive
@@ -769,7 +788,7 @@ export default function ThemeCustomizerModal({
                   <option value="DEMON_TALISMAN">Demon Talisman (Baphomet)</option>
                   <option value="FORBIDDEN_TOME">Forbidden Tome (Leviathan)</option>
                   <option value="ANVIL">Iron Anvil</option>
-                  <option value="COIN_GOLD">Gold Coin</option>
+                  <option value="GOLD_BAR">Gold Bullion Bar</option>
                   <option value="TEA_CUP">Tea Cup</option>
                 </select>
               </div>
@@ -991,6 +1010,7 @@ export default function ThemeCustomizerModal({
         {/* Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-700/60">
           <button
+            type="button"
             onClick={handleResetDefaults}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-pixel text-xs font-bold transition-colors"
           >
@@ -998,6 +1018,7 @@ export default function ThemeCustomizerModal({
           </button>
 
           <button
+            type="button"
             onClick={() => {
               audioSynth.playButton();
               onClose();

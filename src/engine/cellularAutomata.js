@@ -115,16 +115,16 @@ export class CellularAutomataEngine {
     });
   }
 
-  spawnCircle(worldPhysX, worldPhysY, radiusWorld, type, count = 15, baseVx = 0, baseVy = 0) {
-    const cx = worldPhysX <= 320 ? Math.floor(worldPhysX) : Math.max(0, Math.min(319, Math.floor(worldPhysX / 3)));
-    const cy = worldPhysY <= 180 ? Math.floor(worldPhysY) : Math.max(0, Math.min(179, Math.floor(worldPhysY / 3)));
-    const r = radiusWorld <= 50 ? Math.max(1, Math.floor(radiusWorld)) : Math.max(1, Math.floor(radiusWorld / 3));
+  spawnCircleGrid(cx, cy, radiusCells = 4, type = CELL_TYPES.BLOOD, count = 15, baseVx = 0, baseVy = 0) {
+    const gridX = Math.max(0, Math.min(319, Math.floor(cx)));
+    const gridY = Math.max(0, Math.min(179, Math.floor(cy)));
+    const r = Math.max(1, Math.floor(radiusCells));
 
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const dist = Math.random() * r;
-      const gx = Math.max(0, Math.min(319, Math.floor(cx + Math.cos(angle) * dist)));
-      const gy = Math.max(0, Math.min(179, Math.floor(cy + Math.sin(angle) * dist)));
+      const gx = Math.max(0, Math.min(319, Math.floor(gridX + Math.cos(angle) * dist)));
+      const gy = Math.max(0, Math.min(179, Math.floor(gridY + Math.sin(angle) * dist)));
 
       let l = 0;
       if (type === CELL_TYPES.FIRE) l = 16 + Math.floor(Math.random() * 24);
@@ -135,6 +135,13 @@ export class CellularAutomataEngine {
 
       this.set(gx, gy, type, l, jx, jy);
     }
+  }
+
+  spawnCircle(worldPhysX, worldPhysY, radiusWorld, type, count = 15, baseVx = 0, baseVy = 0) {
+    const cx = Math.max(0, Math.min(319, Math.floor(worldPhysX / 3)));
+    const cy = Math.max(0, Math.min(179, Math.floor(worldPhysY / 3)));
+    const r = Math.max(1, Math.floor(radiusWorld / 3));
+    this.spawnCircleGrid(cx, cy, r, type, count, baseVx, baseVy);
   }
 
   coupleMatterBodies(matterBodies) {
@@ -359,13 +366,14 @@ export class CellularAutomataEngine {
     // 3. Lateral surface flow & pooling (±1 and ±2)
     const side1 = idx + dir;
     const side2 = idx - dir;
-    const sideFar = idx + dir * 2;
+    const farX = x + dir * 2;
+    const sideFar = farX >= 1 && farX < 319 ? idx + dir * 2 : -1;
 
     if (this.cells[side1] === CELL_TYPES.EMPTY && this.solidMask[side1] === 0) {
       this.swap(idx, side1);
     } else if (this.cells[side2] === CELL_TYPES.EMPTY && this.solidMask[side2] === 0) {
       this.swap(idx, side2);
-    } else if (this.cells[sideFar] === CELL_TYPES.EMPTY && this.solidMask[sideFar] === 0 && Math.random() < 0.6) {
+    } else if (sideFar !== -1 && this.cells[sideFar] === CELL_TYPES.EMPTY && this.solidMask[sideFar] === 0 && Math.random() < 0.6) {
       this.swap(idx, sideFar);
     }
   }
@@ -552,13 +560,14 @@ export class CellularAutomataEngine {
     // 4. Fast lateral surface flow (high fluid leveling)
     const s1 = idx + dir;
     const s2 = idx - dir;
-    const sFar = idx + dir * 2;
+    const farX = x + dir * 2;
+    const sFar = farX >= 1 && farX < 319 ? idx + dir * 2 : -1;
 
     if (s1 >= 0 && s1 < this.totalCells && this.solidMask[s1] === 0 && (this.cells[s1] === CELL_TYPES.EMPTY || this.cells[s1] === CELL_TYPES.SMOKE)) {
       this.swap(idx, s1);
     } else if (s2 >= 0 && s2 < this.totalCells && this.solidMask[s2] === 0 && (this.cells[s2] === CELL_TYPES.EMPTY || this.cells[s2] === CELL_TYPES.SMOKE)) {
       this.swap(idx, s2);
-    } else if (sFar >= 0 && sFar < this.totalCells && this.solidMask[sFar] === 0 && Math.random() < 0.7 && (this.cells[sFar] === CELL_TYPES.EMPTY || this.cells[sFar] === CELL_TYPES.SMOKE)) {
+    } else if (sFar !== -1 && this.solidMask[sFar] === 0 && Math.random() < 0.7 && (this.cells[sFar] === CELL_TYPES.EMPTY || this.cells[sFar] === CELL_TYPES.SMOKE)) {
       this.swap(idx, sFar);
     }
   }
